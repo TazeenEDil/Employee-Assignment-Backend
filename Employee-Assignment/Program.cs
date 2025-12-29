@@ -7,28 +7,25 @@ using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add CORS
+// Add CORS - Only HTTP for development
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular", policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        policy.WithOrigins("http://localhost:4200")   // Angular dev server
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();  // Add this if using cookies/auth
     });
 });
 
 // Add Database Context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    // Use SQL Server
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         sqlOptions => sqlOptions.EnableRetryOnFailure()
     );
-
-    // Alternative: Use SQLite for development
-    // options.UseSqlite(builder.Configuration.GetConnectionString("SQLiteConnection"));
 });
 
 // Register Repositories
@@ -45,21 +42,8 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "Employee Management API",
         Version = "v1",
-        Description = "A simple API to manage employees",
-        Contact = new OpenApiContact
-        {
-            Name = "Your Name",
-            Email = "your.email@example.com"
-        }
+        Description = "A simple API to manage employees"
     });
-
-    // Include XML comments for better Swagger documentation
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    if (File.Exists(xmlPath))
-    {
-        c.IncludeXmlComments(xmlPath);
-    }
 });
 
 var app = builder.Build();
@@ -71,11 +55,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Employee API V1");
-        c.RoutePrefix = string.Empty; // Set Swagger UI at root
+        c.RoutePrefix = string.Empty;
     });
 }
 
-// Apply migrations and seed data automatically
+// Apply migrations automatically
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -91,9 +75,14 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// CORS must be BEFORE UseHttpsRedirection
 app.UseCors("AllowAngular");
 
-app.UseHttpsRedirection();
+// Disable HTTPS redirect in development
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 

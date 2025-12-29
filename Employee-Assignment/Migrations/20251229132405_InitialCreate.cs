@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Employee_Assignment.Migrations
 {
     /// <inheritdoc />
-    public partial class initialcreate : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -34,7 +34,7 @@ namespace Employee_Assignment.Migrations
                 unique: true);
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc />º
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
