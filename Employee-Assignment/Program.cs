@@ -14,8 +14,7 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:4200")   // Angular dev server
               .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();  // Add this if using cookies/auth
+              .AllowAnyMethod();
     });
 });
 
@@ -75,7 +74,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// CORS must be BEFORE UseHttpsRedirection
+// CORS must be before UseHttpsRedirection
 app.UseCors("AllowAngular");
 
 // Disable HTTPS redirect in development
