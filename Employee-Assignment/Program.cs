@@ -1,24 +1,37 @@
 using Employee_Assignment.Data;
 using Employee_Assignment.Interfaces;
 using Employee_Assignment.Repositories;
+using Employee_Assignment.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using System.Reflection;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add CORS - Only HTTP for development
+// ======================
+// Serilog Configuration
+// ======================
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("Logs/employee-log-.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular", policy =>
     {
-        policy.WithOrigins("http://localhost:4200")   // Angular dev server
+        policy.WithOrigins("http://localhost:4200")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
 });
 
-// Add Database Context
+// Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(
@@ -27,13 +40,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     );
 });
 
-// Register Repositories
+// DI Registration
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
-// Add Controllers
 builder.Services.AddControllers();
 
-// Add Swagger/OpenAPI
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -47,7 +60,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -58,7 +71,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Apply migrations automatically
+// Auto-migrate
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -66,25 +79,23 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
         context.Database.Migrate();
+        services.GetRequiredService<ILogger<Program>>()
+            .LogInformation("Database migration applied successfully");
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database.");
+        services.GetRequiredService<ILogger<Program>>()
+            .LogError(ex, "Error occurred while migrating the database");
     }
 }
 
-// CORS must be before UseHttpsRedirection
 app.UseCors("AllowAngular");
 
-// Disable HTTPS redirect in development
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
 
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
