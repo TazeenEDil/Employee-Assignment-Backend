@@ -9,193 +9,109 @@ namespace Employee_Assignment.Controllers
     [Route("api/[controller]")]
     public class EmployeesController : ControllerBase
     {
-        private readonly IEmployeeRepository _repository;
+        private readonly IEmployeeService _service;
         private readonly ILogger<EmployeesController> _logger;
 
         public EmployeesController(
-            IEmployeeRepository repository,
+            IEmployeeService service,
             ILogger<EmployeesController> logger)
         {
-            _repository = repository;
+            _service = service;
             _logger = logger;
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<EmployeeDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetEmployees()
         {
-            try
-            {
-                var employees = await _repository.GetAllEmployeesAsync();
-                var employeeDtos = employees.Select(e => new EmployeeDto
-                {
-                    Id = e.Id,
-                    Name = e.Name,
-                    Email = e.Email,
-                    Position = e.Position,
-                    CreatedAt = e.CreatedAt
-                });
+            _logger.LogInformation("API: Get all employees called");
 
-                return Ok(employeeDtos);
-            }
-            catch (Exception ex)
+            var employees = await _service.GetAllAsync();
+            return Ok(employees.Select(e => new EmployeeDto
             {
-                _logger.LogError(ex, "Error retrieving employees");
-                return StatusCode(500, "An error occurred while retrieving employees");
-            }
+                Id = e.Id,
+                Name = e.Name,
+                Email = e.Email,
+                Position = e.Position,
+                CreatedAt = e.CreatedAt
+            }));
         }
 
         [HttpGet("{id}")]
-        [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetEmployee(int id)
         {
-            try
-            {
-                var employee = await _repository.GetEmployeeByIdAsync(id);
-                if (employee == null)
-                {
-                    return NotFound(new { message = $"Employee with ID {id} not found" });
-                }
+            _logger.LogInformation("API: Get employee {EmployeeId}", id);
 
-                var employeeDto = new EmployeeDto
-                {
-                    Id = employee.Id,
-                    Name = employee.Name,
-                    Email = employee.Email,
-                    Position = employee.Position,
-                    CreatedAt = employee.CreatedAt
-                };
-
-                return Ok(employeeDto);
-            }
-            catch (Exception ex)
+            var employee = await _service.GetByIdAsync(id);
+            if (employee == null)
             {
-                _logger.LogError(ex, "Error retrieving employee {EmployeeId}", id);
-                return StatusCode(500, "An error occurred while retrieving the employee");
+                _logger.LogWarning("Employee {EmployeeId} not found", id);
+                return NotFound();
             }
+
+            return Ok(new EmployeeDto
+            {
+                Id = employee.Id,
+                Name = employee.Name,
+                Email = employee.Email,
+                Position = employee.Position,
+                CreatedAt = employee.CreatedAt
+            });
         }
 
         [HttpPost]
-        [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeDto createDto)
+        public async Task<IActionResult> CreateEmployee(CreateEmployeeDto dto)
         {
-            try
+            _logger.LogInformation("API: Create employee request");
+
+            if (await _service.EmailExistsAsync(dto.Email))
             {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
-                // Check if email already exists
-                if (await _repository.EmailExistsAsync(createDto.Email))
-                {
-                    return BadRequest(new { message = "An employee with this email already exists" });
-                }
-
-                var employee = new Employee
-                {
-                    Name = createDto.Name,
-                    Email = createDto.Email,
-                    Position = createDto.Position
-                };
-
-                var createdEmployee = await _repository.CreateEmployeeAsync(employee);
-
-                var employeeDto = new EmployeeDto
-                {
-                    Id = createdEmployee.Id,
-                    Name = createdEmployee.Name,
-                    Email = createdEmployee.Email,
-                    Position = createdEmployee.Position,
-                    CreatedAt = createdEmployee.CreatedAt
-                };
-
-                return CreatedAtAction(
-                    nameof(GetEmployee),
-                    new { id = employeeDto.Id },
-                    employeeDto);
+                _logger.LogWarning("Duplicate email detected: {Email}", dto.Email);
+                return BadRequest("Email already exists");
             }
-            catch (Exception ex)
+
+            var employee = await _service.CreateAsync(new Employee
             {
-                _logger.LogError(ex, "Error creating employee");
-                return StatusCode(500, "An error occurred while creating the employee");
-            }
+                Name = dto.Name,
+                Email = dto.Email,
+                Position = dto.Position
+            });
+
+            return CreatedAtAction(nameof(GetEmployee), new { id = employee.Id }, employee);
         }
 
-      
         [HttpPut("{id}")]
-        [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateEmployee(int id, [FromBody] UpdateEmployeeDto updateDto)
+        public async Task<IActionResult> UpdateEmployee(int id, UpdateEmployeeDto dto)
         {
-            try
+            _logger.LogInformation("API: Update employee {EmployeeId}", id);
+
+            var updated = await _service.UpdateAsync(id, new Employee
             {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
+                Name = dto.Name,
+                Email = dto.Email,
+                Position = dto.Position
+            });
 
-                // Check if email already exists for another employee
-                if (await _repository.EmailExistsAsync(updateDto.Email, id))
-                {
-                    return BadRequest(new { message = "An employee with this email already exists" });
-                }
-
-                var employee = new Employee
-                {
-                    Name = updateDto.Name,
-                    Email = updateDto.Email,
-                    Position = updateDto.Position
-                };
-
-                var updatedEmployee = await _repository.UpdateEmployeeAsync(id, employee);
-                if (updatedEmployee == null)
-                {
-                    return NotFound(new { message = $"Employee with ID {id} not found" });
-                }
-
-                var employeeDto = new EmployeeDto
-                {
-                    Id = updatedEmployee.Id,
-                    Name = updatedEmployee.Name,
-                    Email = updatedEmployee.Email,
-                    Position = updatedEmployee.Position,
-                    CreatedAt = updatedEmployee.CreatedAt
-                };
-
-                return Ok(employeeDto);
-            }
-            catch (Exception ex)
+            if (updated == null)
             {
-                _logger.LogError(ex, "Error updating employee {EmployeeId}", id);
-                return StatusCode(500, "An error occurred while updating the employee");
+                _logger.LogWarning("Employee {EmployeeId} not found for update", id);
+                return NotFound();
             }
+
+            return Ok(updated);
         }
 
-       
         [HttpDelete("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteEmployee(int id)
         {
-            try
-            {
-                var deleted = await _repository.DeleteEmployeeAsync(id);
-                if (!deleted)
-                {
-                    return NotFound(new { message = $"Employee with ID {id} not found" });
-                }
+            _logger.LogWarning("API: Delete employee {EmployeeId}", id);
 
-                return Ok(new { message = "Employee deleted successfully" });
-            }
-            catch (Exception ex)
+            if (!await _service.DeleteAsync(id))
             {
-                _logger.LogError(ex, "Error deleting employee {EmployeeId}", id);
-                return StatusCode(500, "An error occurred while deleting the employee");
+                _logger.LogWarning("Employee {EmployeeId} not found for delete", id);
+                return NotFound();
             }
+
+            return Ok();
         }
     }
 }
