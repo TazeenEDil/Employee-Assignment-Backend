@@ -11,9 +11,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ======================
 // Serilog Configuration
-// ======================
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
@@ -23,9 +21,7 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// ======================
 // CORS Configuration
-// ======================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular", policy =>
@@ -37,9 +33,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ======================
 // Database Configuration
-// ======================
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(
@@ -48,9 +42,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     );
 });
 
-// ======================
 // JWT Authentication
-// ======================
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
 
@@ -90,19 +82,15 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// ======================
 // DI Registration
-// ======================
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
-//builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddControllers();
 
-// ======================
 // Swagger Configuration
-// ======================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -141,9 +129,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// ======================
 // Pipeline Configuration
-// ======================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -179,7 +165,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-app.UseAuthentication(); // Add this BEFORE UseAuthorization
+app.UseAuthentication(); 
 app.UseAuthorization();
 
 app.MapControllers();
