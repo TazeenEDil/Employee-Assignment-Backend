@@ -1,6 +1,7 @@
 ﻿using Employee_Assignment.Models;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace Employee_Assignment.Data
 {
     public class ApplicationDbContext : DbContext

@@ -81,12 +81,12 @@ namespace Employee_Assignment.Services
                 Name = registerDto.Name,
                 Email = registerDto.Email,
                 PasswordHash = passwordHash,
-                Role = "User"
+                Role = registerDto.Role
             };
 
             var createdUser = await _userRepository.CreateAsync(user);
 
-            // Generate JWT token
+            // Generate JWT token 
             var token = GenerateJwtToken(createdUser);
             var expiresAt = DateTime.UtcNow.AddHours(24);
 

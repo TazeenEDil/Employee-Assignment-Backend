@@ -21,5 +21,7 @@ namespace Employee_Assignment.DTOs.Auth
         [Required(ErrorMessage = "Confirm Password is required")]
         [Compare("Password", ErrorMessage = "Passwords do not match")]
         public string ConfirmPassword { get; set; }
+
+        public string Role { get; set; } = "Employee";
     }
 }

@@ -8,7 +8,7 @@ namespace Employee_Assignment.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // Add this to protect all endpoints
+    [Authorize]
     public class EmployeesController : ControllerBase
     {
         private readonly IEmployeeService _service;
@@ -23,6 +23,7 @@ namespace Employee_Assignment.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,Employee")] // Both roles can view list
         public async Task<IActionResult> GetEmployees()
         {
             _logger.LogInformation("API: Get all employees called");
@@ -38,6 +39,7 @@ namespace Employee_Assignment.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Employee")] // Both roles can view details
         public async Task<IActionResult> GetEmployee(int id)
         {
             _logger.LogInformation("API: Get employee {EmployeeId}", id);
@@ -59,6 +61,7 @@ namespace Employee_Assignment.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")] // Only Admin can create
         public async Task<IActionResult> CreateEmployee(CreateEmployeeDto dto)
         {
             _logger.LogInformation("API: Create employee request");
@@ -79,6 +82,7 @@ namespace Employee_Assignment.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")] // Only Admin can update
         public async Task<IActionResult> UpdateEmployee(int id, UpdateEmployeeDto dto)
         {
             _logger.LogInformation("API: Update employee {EmployeeId}", id);
@@ -99,6 +103,7 @@ namespace Employee_Assignment.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")] // Only Admin can delete
         public async Task<IActionResult> DeleteEmployee(int id)
         {
             _logger.LogWarning("API: Delete employee {EmployeeId}", id);
