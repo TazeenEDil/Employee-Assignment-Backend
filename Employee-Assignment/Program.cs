@@ -34,13 +34,22 @@ builder.Services.AddCors(options =>
 });
 
 // Database Configuration
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// Database Configuration
+if (builder.Environment.EnvironmentName != "Testing")
 {
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions => sqlOptions.EnableRetryOnFailure()
-    );
-});
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    {
+        options.UseSqlServer(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            sqlOptions => sqlOptions.EnableRetryOnFailure()
+        );
+    });
+}
+else
+{
+    // For testing, just add without configuration - it will be overridden by tests
+    builder.Services.AddDbContext<ApplicationDbContext>(options => { });
+}
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -171,3 +180,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+public partial class Program { }
