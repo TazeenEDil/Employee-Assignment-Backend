@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+#pragma warning disable CA1814 
 
 namespace Employee_Assignment.Infrastructure.Migrations
 {
@@ -113,14 +113,14 @@ namespace Employee_Assignment.Infrastructure.Migrations
                 columns: new[] { "PositionId", "CreatedAt", "Description", "Name" },
                 values: new object[,]
                 {
-                    { 1, new DateTime(2026, 1, 9, 20, 26, 51, 190, DateTimeKind.Utc).AddTicks(6449), "Develops software applications", "Software Engineer" },
-                    { 2, new DateTime(2026, 1, 9, 20, 26, 51, 190, DateTimeKind.Utc).AddTicks(6844), "Senior level developer", "Senior Software Engineer" },
-                    { 3, new DateTime(2026, 1, 9, 20, 26, 51, 190, DateTimeKind.Utc).AddTicks(6847), "Leads development teams", "Team Lead" },
-                    { 4, new DateTime(2026, 1, 9, 20, 26, 51, 190, DateTimeKind.Utc).AddTicks(6849), "Manages projects", "Project Manager" },
-                    { 5, new DateTime(2026, 1, 9, 20, 26, 51, 190, DateTimeKind.Utc).AddTicks(6852), "Quality assurance specialist", "QA Engineer" },
-                    { 6, new DateTime(2026, 1, 9, 20, 26, 51, 190, DateTimeKind.Utc).AddTicks(6854), "Infrastructure and deployment", "DevOps Engineer" },
-                    { 7, new DateTime(2026, 1, 9, 20, 26, 51, 190, DateTimeKind.Utc).AddTicks(6856), "Analyzes business requirements", "Business Analyst" },
-                    { 8, new DateTime(2026, 1, 9, 20, 26, 51, 190, DateTimeKind.Utc).AddTicks(6858), "Human resources management", "HR Manager" }
+                    { 1, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(2391), "Develops software applications", "Software Engineer" },
+                    { 2, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3043), "Senior level developer", "Senior Software Engineer" },
+                    { 3, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3048), "Leads development teams", "Team Lead" },
+                    { 4, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3052), "Manages projects", "Project Manager" },
+                    { 5, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3056), "Quality assurance specialist", "QA Engineer" },
+                    { 6, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3060), "Infrastructure and deployment", "DevOps Engineer" },
+                    { 7, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3064), "Analyzes business requirements", "Business Analyst" },
+                    { 8, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3068), "Human resources management", "HR Manager" }
                 });
 
             migrationBuilder.InsertData(
@@ -128,8 +128,8 @@ namespace Employee_Assignment.Infrastructure.Migrations
                 columns: new[] { "RoleId", "CreatedAt", "Name" },
                 values: new object[,]
                 {
-                    { 1, new DateTime(2026, 1, 9, 20, 26, 51, 189, DateTimeKind.Utc).AddTicks(169), "Admin" },
-                    { 2, new DateTime(2026, 1, 9, 20, 26, 51, 189, DateTimeKind.Utc).AddTicks(667), "Employee" }
+                    { 1, new DateTime(2026, 1, 9, 20, 33, 59, 482, DateTimeKind.Utc).AddTicks(3325), "Admin" },
+                    { 2, new DateTime(2026, 1, 9, 20, 33, 59, 482, DateTimeKind.Utc).AddTicks(4165), "Employee" }
                 });
 
             migrationBuilder.CreateIndex(
