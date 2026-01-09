@@ -1,9 +1,11 @@
-﻿using Employee_Assignment.Data;
-using Employee_Assignment.Interfaces;
-using Employee_Assignment.Models;
+﻿using Employee_Assignment.Application.Interfaces.Repositories;
+using Employee_Assignment.Application.Interfaces.Services;
+using Employee_Assignment.Domain.Entities;
+using Employee_Assignment.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
-namespace Employee_Assignment.Repositories
+namespace Employee_Assignment.Infrastructure.Repositories
 {
     public class EmployeeRepository : IEmployeeRepository
     {
@@ -21,24 +23,29 @@ namespace Employee_Assignment.Repositories
         public async Task<IEnumerable<Employee>> GetAllEmployeesAsync()
         {
             _logger.LogInformation("Repository: Fetching all employees");
-            return await _context.Employees.OrderBy(e => e.Name).ToListAsync();
+            return await _context.Employees
+                .Include(e => e.Position)
+                .OrderBy(e => e.Name)
+                .ToListAsync();
         }
 
         public async Task<Employee?> GetEmployeeByIdAsync(int id)
         {
             _logger.LogInformation("Repository: Fetch employee {EmployeeId}", id);
-            return await _context.Employees.FirstOrDefaultAsync(e => e.Id == id);
+            return await _context.Employees
+                .Include(e => e.Position)
+                .FirstOrDefaultAsync(e => e.Id == id);
         }
 
         public async Task<Employee> CreateEmployeeAsync(Employee employee)
         {
             _logger.LogInformation("Repository: Creating employee {Email}", employee.Email);
-
             employee.CreatedAt = DateTime.UtcNow;
             _context.Employees.Add(employee);
             await _context.SaveChangesAsync();
 
-            return employee;
+            // Reload to include Position
+            return (await GetEmployeeByIdAsync(employee.Id))!;
         }
 
         public async Task<Employee?> UpdateEmployeeAsync(int id, Employee employee)
@@ -52,10 +59,12 @@ namespace Employee_Assignment.Repositories
 
             existing.Name = employee.Name;
             existing.Email = employee.Email;
-            existing.Position = employee.Position;
+            existing.PositionId = employee.PositionId;
 
             await _context.SaveChangesAsync();
-            return existing;
+
+            // Reload to include Position
+            return await GetEmployeeByIdAsync(id);
         }
 
         public async Task<bool> DeleteEmployeeAsync(int id)

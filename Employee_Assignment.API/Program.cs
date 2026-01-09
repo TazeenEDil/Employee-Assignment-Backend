@@ -1,8 +1,11 @@
 using Employee_Assignment.API.Middleware;
-using Employee_Assignment.Application.Interfaces.Repositories;
+using Employee_Assignment.Application.Interfaces;
 using Employee_Assignment.Application.Interfaces.Services;
+using Employee_Assignment.Application.Interfaces.Repositories;
 using Employee_Assignment.Application.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Employee_Assignment.Infrastructure.Data;
+using Employee_Assignment.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;

@@ -1,7 +1,7 @@
-﻿using Employee_Assignment.DTOs.Auth;
-using Employee_Assignment.Models;
+﻿using Employee_Assignment.Application.DTOs.Auth;
+using Employee_Assignment.Domain.Entities;
 
-namespace Employee_Assignment.Interfaces
+namespace Employee_Assignment.Application.Interfaces.Services
 {
     public interface IAuthService
     {
@@ -9,6 +9,6 @@ namespace Employee_Assignment.Interfaces
         Task<AuthResponseDto?> RegisterAsync(RegisterDto registerDto);
         Task<User?> GetUserByEmailAsync(string email);
         Task<bool> EmailExistsAsync(string email);
-        string GenerateJwtToken(User user);
+        string GenerateJwtToken(User user, List<string> roles);
     }
 }

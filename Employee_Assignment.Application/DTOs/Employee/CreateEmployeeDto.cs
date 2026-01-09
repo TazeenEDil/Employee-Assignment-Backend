@@ -1,11 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Employee_Assignment.DTOs
+namespace Employee_Assignment.Application.DTOs.Employee
 {
-    public class EmployeeDto
+    public class CreateEmployeeDto
     {
-        public int Id { get; set; }
-
         [Required(ErrorMessage = "Name is required")]
         [StringLength(100, ErrorMessage = "Name cannot exceed 100 characters")]
         public string Name { get; set; }
@@ -16,11 +14,6 @@ namespace Employee_Assignment.DTOs
         public string Email { get; set; }
 
         [Required(ErrorMessage = "Position is required")]
-        [StringLength(100, ErrorMessage = "Position cannot exceed 100 characters")]
-        public string Position { get; set; }
-
-        public DateTime? CreatedAt { get; set; }
+        public int PositionId { get; set; }
     }
 }
-
-    

@@ -1,9 +1,11 @@
-﻿using Employee_Assignment.Data;
-using Employee_Assignment.Interfaces;
-using Employee_Assignment.Models;
+﻿using Employee_Assignment.Application.Interfaces.Repositories;
+using Employee_Assignment.Domain.Entities;
+using Employee_Assignment.Infrastructure.Data;
+using Employee_Assignment.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
-namespace Employee_Assignment.Repositories
+namespace Employee_Assignment.Infrastructure.Repositories
 {
     public class UserRepository : IUserRepository
     {
@@ -21,13 +23,19 @@ namespace Employee_Assignment.Repositories
         public async Task<User?> GetByEmailAsync(string email)
         {
             _logger.LogInformation("Repository: Fetching user by email {Email}", email);
-            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Email == email);
         }
 
         public async Task<User?> GetByIdAsync(int id)
         {
             _logger.LogInformation("Repository: Fetching user by ID {UserId}", id);
-            return await _context.Users.FindAsync(id);
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
         }
 
         public async Task<User> CreateAsync(User user)

@@ -3,26 +3,23 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Employee_Assignment.Domain.Entities
 {
-    [Table("UserRoles")]
-    public class UserRole
+    [Table("Positions")]
+    public class Position
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int UserRoleId { get; set; }
+        public int PositionId { get; set; }
 
         [Required]
-        public int UserId { get; set; }
+        [MaxLength(100)]
+        public string Name { get; set; } // "Software Engineer", "Manager", etc.
 
-        [Required]
-        public int RoleId { get; set; }
+        [MaxLength(500)]
+        public string? Description { get; set; }
 
-        public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation properties
-        [ForeignKey("UserId")]
-        public virtual User User { get; set; }
-
-        [ForeignKey("RoleId")]
-        public virtual Role Role { get; set; }
+        // Navigation property
+        public virtual ICollection<Employee> Employees { get; set; } = new List<Employee>();
     }
 }

@@ -1,5 +1,7 @@
-﻿using Employee_Assignment.DTOs.Auth;
-using Employee_Assignment.Interfaces;
+﻿using Employee_Assignment.Application.Interfaces.Services;
+using Employee_Assignment.Application.DTOs.Auth;
+using Employee_Assignment.Application.DTOs.Employee;
+using Employee_Assignment.Application.DTOs.Position;    
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

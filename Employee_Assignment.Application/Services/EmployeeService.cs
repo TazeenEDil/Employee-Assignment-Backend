@@ -2,7 +2,6 @@
 using Employee_Assignment.Application.Interfaces.Repositories;
 using Employee_Assignment.Application.Interfaces.Services;
 using Employee_Assignment.Domain.Entities;
-using Employee_Assignment.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace Employee_Assignment.Application.Services

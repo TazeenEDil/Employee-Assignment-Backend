@@ -1,4 +1,4 @@
-﻿namespace Employee_Assignment.DTOs.Auth
+﻿namespace Employee_Assignment.Application.DTOs.Auth
 {
     public class UserDto
     {

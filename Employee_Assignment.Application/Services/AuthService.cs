@@ -4,8 +4,6 @@ using Employee_Assignment.Application.Exceptions;
 using Employee_Assignment.Application.Interfaces.Repositories;
 using Employee_Assignment.Application.Interfaces.Services;
 using Employee_Assignment.Domain.Entities;
-using Employee_Assignment.DTOs.Auth;
-using Employee_Assignment.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;

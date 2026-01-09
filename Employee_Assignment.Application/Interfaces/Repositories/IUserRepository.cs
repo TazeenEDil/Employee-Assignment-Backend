@@ -1,6 +1,6 @@
-﻿using Employee_Assignment.Models;
+﻿using Employee_Assignment.Domain.Entities;
 
-namespace Employee_Assignment.Interfaces
+namespace Employee_Assignment.Application.Interfaces.Repositories
 {
     public interface IUserRepository
     {
