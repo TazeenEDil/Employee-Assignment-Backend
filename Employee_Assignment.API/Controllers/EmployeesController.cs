@@ -1,10 +1,12 @@
-﻿using Employee_Assignment.DTOs;
+﻿using Employee_Assignment.Application.DTOs.Employee;
+using Employee_Assignment.Application.Interfaces.Services;
+using Employee_Assignment.Domain.Entities;
+using Employee_Assignment.DTOs;
 using Employee_Assignment.Interfaces;
-using Employee_Assignment.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Employee_Assignment.Controllers
+namespace Employee_Assignment.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -23,7 +25,7 @@ namespace Employee_Assignment.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin,Employee")] // Both roles can view list
+        [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> GetEmployees()
         {
             _logger.LogInformation("API: Get all employees called");
@@ -33,86 +35,88 @@ namespace Employee_Assignment.Controllers
                 Id = e.Id,
                 Name = e.Name,
                 Email = e.Email,
-                Position = e.Position,
+                PositionId = e.PositionId,
+                PositionName = e.Position?.Name ?? "Unknown",
                 CreatedAt = e.CreatedAt
             }));
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Employee")] // Both roles can view details
+        [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> GetEmployee(int id)
         {
             _logger.LogInformation("API: Get employee {EmployeeId}", id);
             var employee = await _service.GetByIdAsync(id);
-            if (employee == null)
-            {
-                _logger.LogWarning("Employee {EmployeeId} not found", id);
-                return NotFound(new { message = "Employee not found" });
-            }
 
             return Ok(new EmployeeDto
             {
                 Id = employee.Id,
                 Name = employee.Name,
                 Email = employee.Email,
-                Position = employee.Position,
+                PositionId = employee.PositionId,
+                PositionName = employee.Position?.Name ?? "Unknown",
                 CreatedAt = employee.CreatedAt
             });
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")] // Only Admin can create
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateEmployee(CreateEmployeeDto dto)
         {
             _logger.LogInformation("API: Create employee request");
-            if (await _service.EmailExistsAsync(dto.Email))
-            {
-                _logger.LogWarning("Duplicate email detected: {Email}", dto.Email);
-                return BadRequest(new { message = "Email already exists" });
-            }
 
             var employee = await _service.CreateAsync(new Employee
             {
                 Name = dto.Name,
                 Email = dto.Email,
-                Position = dto.Position
+                PositionId = dto.PositionId
             });
 
-            return CreatedAtAction(nameof(GetEmployee), new { id = employee.Id }, employee);
+            var result = new EmployeeDto
+            {
+                Id = employee.Id,
+                Name = employee.Name,
+                Email = employee.Email,
+                PositionId = employee.PositionId,
+                PositionName = employee.Position?.Name ?? "Unknown",
+                CreatedAt = employee.CreatedAt
+            };
+
+            return CreatedAtAction(nameof(GetEmployee), new { id = employee.Id }, result);
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")] // Only Admin can update
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateEmployee(int id, UpdateEmployeeDto dto)
         {
             _logger.LogInformation("API: Update employee {EmployeeId}", id);
+
             var updated = await _service.UpdateAsync(id, new Employee
             {
                 Name = dto.Name,
                 Email = dto.Email,
-                Position = dto.Position
+                PositionId = dto.PositionId
             });
 
-            if (updated == null)
+            var result = new EmployeeDto
             {
-                _logger.LogWarning("Employee {EmployeeId} not found for update", id);
-                return NotFound(new { message = "Employee not found" });
-            }
+                Id = updated.Id,
+                Name = updated.Name,
+                Email = updated.Email,
+                PositionId = updated.PositionId,
+                PositionName = updated.Position?.Name ?? "Unknown",
+                CreatedAt = updated.CreatedAt
+            };
 
-            return Ok(updated);
+            return Ok(result);
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")] // Only Admin can delete
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteEmployee(int id)
         {
             _logger.LogWarning("API: Delete employee {EmployeeId}", id);
-            if (!await _service.DeleteAsync(id))
-            {
-                _logger.LogWarning("Employee {EmployeeId} not found for delete", id);
-                return NotFound(new { message = "Employee not found" });
-            }
-
+            await _service.DeleteAsync(id);
             return Ok(new { message = "Employee deleted successfully" });
         }
     }

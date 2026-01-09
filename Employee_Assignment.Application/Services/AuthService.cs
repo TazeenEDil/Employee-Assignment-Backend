@@ -1,26 +1,35 @@
-﻿using Employee_Assignment.DTOs.Auth;
+﻿using BCrypt.Net;
+using Employee_Assignment.Application.DTOs.Auth;
+using Employee_Assignment.Application.Exceptions;
+using Employee_Assignment.Application.Interfaces.Repositories;
+using Employee_Assignment.Application.Interfaces.Services;
+using Employee_Assignment.Domain.Entities;
+using Employee_Assignment.DTOs.Auth;
 using Employee_Assignment.Interfaces;
-using Employee_Assignment.Models;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using BCrypt.Net;
 
-namespace Employee_Assignment.Services
+namespace Employee_Assignment.Application.Services
 {
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IRoleRepository _roleRepository;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             IUserRepository userRepository,
+            IRoleRepository roleRepository,
             IConfiguration configuration,
             ILogger<AuthService> logger)
         {
             _userRepository = userRepository;
+            _roleRepository = roleRepository;
             _configuration = configuration;
             _logger = logger;
         }
@@ -30,25 +39,24 @@ namespace Employee_Assignment.Services
             _logger.LogInformation("Service: Login attempt for {Email}", loginDto.Email);
 
             var user = await _userRepository.GetByEmailAsync(loginDto.Email);
-
             if (user == null)
             {
                 _logger.LogWarning("Service: User not found {Email}", loginDto.Email);
-                return null;
+                throw new UnauthorizedException("Invalid email or password");
             }
 
-            // Verify password
             if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
             {
                 _logger.LogWarning("Service: Invalid password for {Email}", loginDto.Email);
-                return null;
+                throw new UnauthorizedException("Invalid email or password");
             }
 
-            // Update last login
             await _userRepository.UpdateLastLoginAsync(user.Id);
 
-            // Generate JWT token
-            var token = GenerateJwtToken(user);
+            var roles = await _roleRepository.GetUserRolesAsync(user.Id);
+            var roleNames = roles.Select(r => r.Name).ToList();
+
+            var token = GenerateJwtToken(user, roleNames);
             var expiresAt = DateTime.UtcNow.AddHours(24);
 
             _logger.LogInformation("Service: Login successful for {Email}", loginDto.Email);
@@ -58,7 +66,7 @@ namespace Employee_Assignment.Services
                 Token = token,
                 Email = user.Email,
                 Name = user.Name,
-                Role = user.Role,
+                Roles = roleNames,
                 ExpiresAt = expiresAt
             };
         }
@@ -70,24 +78,30 @@ namespace Employee_Assignment.Services
             if (await _userRepository.EmailExistsAsync(registerDto.Email))
             {
                 _logger.LogWarning("Service: Email already exists {Email}", registerDto.Email);
-                return null;
+                throw new DuplicateException("User", "Email", registerDto.Email);
             }
 
-            // Hash password
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
 
             var user = new User
             {
                 Name = registerDto.Name,
                 Email = registerDto.Email,
-                PasswordHash = passwordHash,
-                Role = registerDto.Role
+                PasswordHash = passwordHash
             };
 
             var createdUser = await _userRepository.CreateAsync(user);
 
-            // Generate JWT token 
-            var token = GenerateJwtToken(createdUser);
+            // Assign role to user
+            var role = await _roleRepository.GetByNameAsync(registerDto.Role);
+            if (role == null)
+            {
+                throw new NotFoundException("Role", registerDto.Role);
+            }
+
+            await _roleRepository.AssignRoleToUserAsync(createdUser.Id, role.RoleId);
+
+            var token = GenerateJwtToken(createdUser, new List<string> { registerDto.Role });
             var expiresAt = DateTime.UtcNow.AddHours(24);
 
             _logger.LogInformation("Service: Registration successful for {Email}", registerDto.Email);
@@ -97,7 +111,7 @@ namespace Employee_Assignment.Services
                 Token = token,
                 Email = createdUser.Email,
                 Name = createdUser.Name,
-                Role = createdUser.Role,
+                Roles = new List<string> { registerDto.Role },
                 ExpiresAt = expiresAt
             };
         }
@@ -112,7 +126,7 @@ namespace Employee_Assignment.Services
             return await _userRepository.EmailExistsAsync(email);
         }
 
-        public string GenerateJwtToken(User user)
+        public string GenerateJwtToken(User user, List<string> roles)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["SecretKey"];
@@ -123,15 +137,20 @@ namespace Employee_Assignment.Services
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Email),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(JwtRegisteredClaimNames.Name, user.Name),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Role, user.Role),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
+
+            // Add multiple role claims
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: issuer,
