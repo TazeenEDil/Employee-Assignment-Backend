@@ -1,27 +1,31 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿
+using System.ComponentModel.DataAnnotations;
 
 namespace Employee_Assignment.Application.DTOs.Auth
 {
     public class RegisterDto
     {
-        [Required(ErrorMessage = "Name is required")]
-        [StringLength(100, ErrorMessage = "Name cannot exceed 100 characters")]
+        [Required]
+        [MaxLength(100)]
         public string Name { get; set; }
 
-        [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
-        [StringLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
+        [Required]
+        [EmailAddress]
+        [MaxLength(100)]
         public string Email { get; set; }
 
-        [Required(ErrorMessage = "Password is required")]
-        [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
-        [MaxLength(100, ErrorMessage = "Password cannot exceed 100 characters")]
+        [Required]
+        [MinLength(6)]
         public string Password { get; set; }
 
-        [Required(ErrorMessage = "Confirm Password is required")]
-        [Compare("Password", ErrorMessage = "Passwords do not match")]
+        [Required]
+        [Compare("Password")]
         public string ConfirmPassword { get; set; }
 
-        public string Role { get; set; } = "Employee";
+        [Required]
+        public string Role { get; set; } // "Admin" or "Employee"
+
+        // Optional: Only required for Employee role
+        public int? PositionId { get; set; }
     }
 }

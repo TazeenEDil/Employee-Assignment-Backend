@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-#pragma warning disable CA1814 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
 namespace Employee_Assignment.Infrastructure.Migrations
 {
@@ -113,14 +113,14 @@ namespace Employee_Assignment.Infrastructure.Migrations
                 columns: new[] { "PositionId", "CreatedAt", "Description", "Name" },
                 values: new object[,]
                 {
-                    { 1, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(2391), "Develops software applications", "Software Engineer" },
-                    { 2, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3043), "Senior level developer", "Senior Software Engineer" },
-                    { 3, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3048), "Leads development teams", "Team Lead" },
-                    { 4, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3052), "Manages projects", "Project Manager" },
-                    { 5, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3056), "Quality assurance specialist", "QA Engineer" },
-                    { 6, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3060), "Infrastructure and deployment", "DevOps Engineer" },
-                    { 7, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3064), "Analyzes business requirements", "Business Analyst" },
-                    { 8, new DateTime(2026, 1, 9, 20, 33, 59, 484, DateTimeKind.Utc).AddTicks(3068), "Human resources management", "HR Manager" }
+                    { 1, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Develops software applications", "Software Engineer" },
+                    { 2, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Senior level developer", "Senior Software Engineer" },
+                    { 3, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Leads development teams", "Team Lead" },
+                    { 4, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Manages projects", "Project Manager" },
+                    { 5, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Quality assurance specialist", "QA Engineer" },
+                    { 6, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Infrastructure and deployment", "DevOps Engineer" },
+                    { 7, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Analyzes business requirements", "Business Analyst" },
+                    { 8, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Human resources management", "HR Manager" }
                 });
 
             migrationBuilder.InsertData(
@@ -128,8 +128,8 @@ namespace Employee_Assignment.Infrastructure.Migrations
                 columns: new[] { "RoleId", "CreatedAt", "Name" },
                 values: new object[,]
                 {
-                    { 1, new DateTime(2026, 1, 9, 20, 33, 59, 482, DateTimeKind.Utc).AddTicks(3325), "Admin" },
-                    { 2, new DateTime(2026, 1, 9, 20, 33, 59, 482, DateTimeKind.Utc).AddTicks(4165), "Employee" }
+                    { 1, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Admin" },
+                    { 2, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Employee" }
                 });
 
             migrationBuilder.CreateIndex(

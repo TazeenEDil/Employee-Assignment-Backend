@@ -12,12 +12,11 @@ namespace Employee_Assignment.Domain.Entities
 
         [Required]
         [MaxLength(100)]
-        public string Name { get; set; } // "Software Engineer", "Manager", etc.
-
+        public string Name { get; set; } 
         [MaxLength(500)]
         public string? Description { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } // ⭐ Removed = DateTime.UtcNow
 
         // Navigation property
         public virtual ICollection<Employee> Employees { get; set; } = new List<Employee>();

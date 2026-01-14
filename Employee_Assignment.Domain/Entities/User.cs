@@ -22,7 +22,7 @@ namespace Employee_Assignment.Domain.Entities
         [Required]
         public string PasswordHash { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } // ⭐ Removed = DateTime.UtcNow
 
         public DateTime? LastLoginAt { get; set; }
 

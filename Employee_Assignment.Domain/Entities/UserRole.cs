@@ -16,7 +16,7 @@ namespace Employee_Assignment.Domain.Entities
         [Required]
         public int RoleId { get; set; }
 
-        public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
+        public DateTime AssignedAt { get; set; } // ⭐ Removed = DateTime.UtcNow
 
         // Navigation properties
         [ForeignKey("UserId")]
@@ -26,3 +26,4 @@ namespace Employee_Assignment.Domain.Entities
         public virtual Role Role { get; set; }
     }
 }
+

@@ -1,5 +1,6 @@
 ﻿using Employee_Assignment.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Employee_Assignment.Infrastructure.Data
 {
@@ -23,22 +24,25 @@ namespace Employee_Assignment.Infrastructure.Data
             // Apply all configurations from assembly
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
+            // ⭐ FIX: Use fixed DateTime instead of DateTime.UtcNow
+            var seedDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
             // Seed default roles
             modelBuilder.Entity<Role>().HasData(
-                new Role { RoleId = 1, Name = "Admin", CreatedAt = DateTime.UtcNow },
-                new Role { RoleId = 2, Name = "Employee", CreatedAt = DateTime.UtcNow }
+                new Role { RoleId = 1, Name = "Admin", CreatedAt = seedDate },
+                new Role { RoleId = 2, Name = "Employee", CreatedAt = seedDate }
             );
 
             // Seed default positions
             modelBuilder.Entity<Position>().HasData(
-                new Position { PositionId = 1, Name = "Software Engineer", Description = "Develops software applications", CreatedAt = DateTime.UtcNow },
-                new Position { PositionId = 2, Name = "Senior Software Engineer", Description = "Senior level developer", CreatedAt = DateTime.UtcNow },
-                new Position { PositionId = 3, Name = "Team Lead", Description = "Leads development teams", CreatedAt = DateTime.UtcNow },
-                new Position { PositionId = 4, Name = "Project Manager", Description = "Manages projects", CreatedAt = DateTime.UtcNow },
-                new Position { PositionId = 5, Name = "QA Engineer", Description = "Quality assurance specialist", CreatedAt = DateTime.UtcNow },
-                new Position { PositionId = 6, Name = "DevOps Engineer", Description = "Infrastructure and deployment", CreatedAt = DateTime.UtcNow },
-                new Position { PositionId = 7, Name = "Business Analyst", Description = "Analyzes business requirements", CreatedAt = DateTime.UtcNow },
-                new Position { PositionId = 8, Name = "HR Manager", Description = "Human resources management", CreatedAt = DateTime.UtcNow }
+                new Position { PositionId = 1, Name = "Software Engineer", Description = "Develops software applications", CreatedAt = seedDate },
+                new Position { PositionId = 2, Name = "Senior Software Engineer", Description = "Senior level developer", CreatedAt = seedDate },
+                new Position { PositionId = 3, Name = "Team Lead", Description = "Leads development teams", CreatedAt = seedDate },
+                new Position { PositionId = 4, Name = "Project Manager", Description = "Manages projects", CreatedAt = seedDate },
+                new Position { PositionId = 5, Name = "QA Engineer", Description = "Quality assurance specialist", CreatedAt = seedDate },
+                new Position { PositionId = 6, Name = "DevOps Engineer", Description = "Infrastructure and deployment", CreatedAt = seedDate },
+                new Position { PositionId = 7, Name = "Business Analyst", Description = "Analyzes business requirements", CreatedAt = seedDate },
+                new Position { PositionId = 8, Name = "HR Manager", Description = "Human resources management", CreatedAt = seedDate }
             );
         }
     }

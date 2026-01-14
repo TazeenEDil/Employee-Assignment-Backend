@@ -17,17 +17,20 @@ namespace Employee_Assignment.Application.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
+        private readonly IEmployeeRepository _employeeRepository;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             IUserRepository userRepository,
             IRoleRepository roleRepository,
+            IEmployeeRepository employeeRepository,
             IConfiguration configuration,
             ILogger<AuthService> logger)
         {
             _userRepository = userRepository;
             _roleRepository = roleRepository;
+            _employeeRepository = employeeRepository;
             _configuration = configuration;
             _logger = logger;
         }
@@ -64,7 +67,7 @@ namespace Employee_Assignment.Application.Services
                 Token = token,
                 Email = user.Email,
                 Name = user.Name,
-                Roles = roleNames,
+                Role = roleNames.FirstOrDefault() ?? "Employee",  // Changed from Roles to Role
                 ExpiresAt = expiresAt
             };
         }
@@ -72,6 +75,13 @@ namespace Employee_Assignment.Application.Services
         public async Task<AuthResponseDto?> RegisterAsync(RegisterDto registerDto)
         {
             _logger.LogInformation("Service: Registration attempt for {Email}", registerDto.Email);
+
+            // Validate PositionId for Employee role
+            if (registerDto.Role == "Employee" && (!registerDto.PositionId.HasValue || registerDto.PositionId.Value <= 0))
+            {
+                _logger.LogWarning("Service: Position is required for Employee registration");
+                throw new ArgumentException("Position is required for Employee registration");
+            }
 
             if (await _userRepository.EmailExistsAsync(registerDto.Email))
             {
@@ -85,7 +95,8 @@ namespace Employee_Assignment.Application.Services
             {
                 Name = registerDto.Name,
                 Email = registerDto.Email,
-                PasswordHash = passwordHash
+                PasswordHash = passwordHash,
+                CreatedAt = DateTime.UtcNow
             };
 
             var createdUser = await _userRepository.CreateAsync(user);
@@ -99,6 +110,21 @@ namespace Employee_Assignment.Application.Services
 
             await _roleRepository.AssignRoleToUserAsync(createdUser.Id, role.RoleId);
 
+            // If Employee, create employee record
+            if (registerDto.Role == "Employee" && registerDto.PositionId.HasValue)
+            {
+                var employee = new Employee
+                {
+                    Name = registerDto.Name,
+                    Email = registerDto.Email,
+                    PositionId = registerDto.PositionId.Value,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _employeeRepository.CreateEmployeeAsync(employee);
+                _logger.LogInformation("Service: Employee record created for {Email}", registerDto.Email);
+            }
+
             var token = GenerateJwtToken(createdUser, new List<string> { registerDto.Role });
             var expiresAt = DateTime.UtcNow.AddHours(24);
 
@@ -109,7 +135,7 @@ namespace Employee_Assignment.Application.Services
                 Token = token,
                 Email = createdUser.Email,
                 Name = createdUser.Name,
-                Roles = new List<string> { registerDto.Role },
+                Role = registerDto.Role,  // Changed from Roles to Role
                 ExpiresAt = expiresAt
             };
         }
