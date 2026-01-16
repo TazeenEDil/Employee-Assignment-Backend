@@ -22,10 +22,6 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Employee-Assignment\Employee-Assignment.csproj" />
-  </ItemGroup>
 	<ItemGroup>
 		<None Update="appsettings.Test.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
