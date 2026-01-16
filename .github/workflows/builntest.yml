@@ -2,7 +2,7 @@ name: Employee-Assignment-Backend
 
 on:
   push:
-    branches: [ "master", "assignment-Day3", "assignment-Day4", "assignment-Day5" ]
+    branches: [ "master", "assignment-Day3", "assignment-Day4", "assignment-Day5", "assignment-Day6", "assignment-Day7", "assignmen-newTables", "assignment-Day8"]
 
 jobs:
   build:
