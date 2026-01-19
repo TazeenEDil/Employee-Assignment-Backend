@@ -1,6 +1,5 @@
 ﻿using Employee_Assignment.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Employee_Assignment.Infrastructure.Data
 {
@@ -16,6 +15,8 @@ namespace Employee_Assignment.Infrastructure.Data
         public DbSet<Role> Roles { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<Position> Positions { get; set; }
+        public DbSet<FileStorage> FileStorages { get; set; }
+        public DbSet<EmployeeFile> EmployeeFiles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -24,7 +25,6 @@ namespace Employee_Assignment.Infrastructure.Data
             // Apply all configurations from assembly
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
-            // ⭐ FIX: Use fixed DateTime instead of DateTime.UtcNow
             var seedDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
             // Seed default roles
@@ -44,6 +44,19 @@ namespace Employee_Assignment.Infrastructure.Data
                 new Position { PositionId = 7, Name = "Business Analyst", Description = "Analyzes business requirements", CreatedAt = seedDate },
                 new Position { PositionId = 8, Name = "HR Manager", Description = "Human resources management", CreatedAt = seedDate }
             );
+
+            // Configure EmployeeFile relationships
+            modelBuilder.Entity<EmployeeFile>()
+                .HasOne(ef => ef.Employee)
+                .WithMany()
+                .HasForeignKey(ef => ef.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<EmployeeFile>()
+                .HasOne(ef => ef.FileStorage)
+                .WithMany(fs => fs.EmployeeFiles)
+                .HasForeignKey(ef => ef.FileStorageId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
