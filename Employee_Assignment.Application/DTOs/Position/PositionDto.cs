@@ -1,4 +1,5 @@
-﻿namespace Employee_Assignment.Application.DTOs.Position
+﻿
+namespace Employee_Assignment.Application.DTOs.Position
 {
     public class PositionDto
     {

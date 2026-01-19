@@ -125,11 +125,13 @@ builder.Services.AddSingleton<ICircuitBreakerService, CircuitBreakerService>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IFileStorageRepository, FileStorageRepository>();
 builder.Services.AddScoped<IPositionRepository, PositionRepository>();
 
 // Register Services (Application Layer)
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<IPositionService, PositionService>();
 
 // Add Logging
@@ -176,6 +178,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowAngularApp");
 
 app.UseAuthentication();
+app.UseStaticFiles();   
 app.UseAuthorization();
 
 app.MapControllers();
