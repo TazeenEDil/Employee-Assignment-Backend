@@ -16,3 +16,4 @@
         public bool DailyReportSubmitted { get; set; }
         public TimeSpan? TotalWorkHours { get; set; }
     }
+}
