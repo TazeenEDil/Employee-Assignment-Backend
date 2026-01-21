@@ -3,6 +3,7 @@ using Employee_Assignment.Application.Interfaces.Services;
 using Employee_Assignment.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Employee_Assignment.API.Controllers
 {
@@ -22,11 +23,45 @@ namespace Employee_Assignment.API.Controllers
             _logger = logger;
         }
 
+        // Helper methods
+        private string GetCurrentUserEmail()
+        {
+            return User.FindFirst(ClaimTypes.Email)?.Value
+                ?? User.FindFirst(ClaimTypes.Name)?.Value
+                ?? User.FindFirst("email")?.Value;
+        }
+
+        private bool IsAdmin()
+        {
+            return User.IsInRole("Admin");
+        }
+
+        private async Task<int?> GetCurrentEmployeeIdAsync()
+        {
+            var email = GetCurrentUserEmail();
+            if (string.IsNullOrEmpty(email))
+                return null;
+
+            try
+            {
+                var employees = await _service.GetAllAsync();
+                var employee = employees.FirstOrDefault(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+                return employee?.Id;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting employee ID for email {Email}", email);
+                return null;
+            }
+        }
+
         [HttpGet]
         [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> GetEmployees()
         {
             _logger.LogInformation("API: Get all employees called");
+
+            // Both Admin and Employee can see all employees
             var employees = await _service.GetAllAsync();
             return Ok(employees.Select(e => new EmployeeDto
             {
@@ -44,6 +79,8 @@ namespace Employee_Assignment.API.Controllers
         public async Task<IActionResult> GetEmployee(int id)
         {
             _logger.LogInformation("API: Get employee {EmployeeId}", id);
+
+            // Both Admin and Employee can view any employee's details
             var employee = await _service.GetByIdAsync(id);
 
             return Ok(new EmployeeDto
@@ -116,6 +153,38 @@ namespace Employee_Assignment.API.Controllers
             _logger.LogWarning("API: Delete employee {EmployeeId}", id);
             await _service.DeleteAsync(id);
             return Ok(new { message = "Employee deleted successfully" });
+        }
+
+        // NEW: Endpoint for employees to get their own profile
+        [HttpGet("me")]
+        [Authorize(Roles = "Employee")]
+        public async Task<IActionResult> GetMyProfile()
+        {
+            try
+            {
+                var employeeId = await GetCurrentEmployeeIdAsync();
+                if (!employeeId.HasValue)
+                {
+                    return Unauthorized(new { message = "Could not identify employee" });
+                }
+
+                var employee = await _service.GetByIdAsync(employeeId.Value);
+
+                return Ok(new EmployeeDto
+                {
+                    Id = employee.Id,
+                    Name = employee.Name,
+                    Email = employee.Email,
+                    PositionId = employee.PositionId,
+                    PositionName = employee.Position?.Name ?? "Unknown",
+                    CreatedAt = employee.CreatedAt
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving employee profile");
+                return StatusCode(500, new { message = "An error occurred while retrieving profile" });
+            }
         }
     }
 }
