@@ -116,6 +116,12 @@ namespace Employee_Assignment.Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(aa => aa.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<LeaveRequest>()
+                .Property(lr => lr.EmailActionToken)
+                .IsRequired()
+                .HasMaxLength(100);
         }
+
     }
-}
+    }
