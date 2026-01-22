@@ -18,6 +18,8 @@ namespace Employee_Assignment.Domain.Entities
         public string? RejectionReason { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
+        public string EmailActionToken { get; set; }
+
 
         public virtual Employee Employee { get; set; } = null!;
         public virtual LeaveType LeaveType { get; set; } = null!;

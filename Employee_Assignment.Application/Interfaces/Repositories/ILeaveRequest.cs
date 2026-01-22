@@ -12,6 +12,8 @@ namespace Employee_Assignment.Application.Interfaces.Repositories
         Task<LeaveRequest> CreateAsync(LeaveRequest leaveRequest);
         Task<LeaveRequest> UpdateAsync(LeaveRequest leaveRequest);
         Task<int> GetApprovedLeaveDaysAsync(int employeeId, int leaveTypeId, int year);
+
+
     }
 
 }

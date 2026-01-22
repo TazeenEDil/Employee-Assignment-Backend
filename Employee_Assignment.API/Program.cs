@@ -128,11 +128,23 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IFileStorageRepository, FileStorageRepository>();
 builder.Services.AddScoped<IPositionRepository, PositionRepository>();
 
+// Attendance Module Repositories
+builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
+builder.Services.AddScoped<ILeaveTypeRepository, LeaveTypeRepository>();
+builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
+builder.Services.AddScoped<IAttendanceAlertRepository, AttendanceAlertRepository>();
+
 // Register Services (Application Layer)
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<IPositionService, PositionService>();
+
+// Attendance Module Services
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<ILeaveService, LeaveService>();
+builder.Services.AddScoped<IAttendanceAlertService, AttendanceAlertService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Add Logging
 builder.Logging.ClearProviders();
@@ -178,7 +190,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowAngularApp");
 
 app.UseAuthentication();
-app.UseStaticFiles();   
+app.UseStaticFiles();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -217,7 +229,7 @@ using (var scope = app.Services.CreateScope())
 
         logger.LogInformation("Starting database migration...");
         context.Database.Migrate();
-        logger.LogInformation("? Database migration completed successfully");
+        logger.LogInformation("Database migration completed successfully");
 
         // Log database connection info
         var connectionString = app.Configuration.GetConnectionString("DefaultConnection");
@@ -225,20 +237,22 @@ using (var scope = app.Services.CreateScope())
             .FirstOrDefault(s => s.Trim().StartsWith("Server=", StringComparison.OrdinalIgnoreCase))
             ?.Split('=')[1];
 
-        logger.LogInformation("?? Connected to database server: {ServerName}", serverName ?? "Unknown");
+        logger.LogInformation("Connected to database server: {ServerName}", serverName ?? "Unknown");
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "? An error occurred while migrating the database. Application will continue but may not function correctly.");
+        logger.LogError(ex, "An error occurred while migrating the database. Application will continue but may not function correctly.");
     }
 }
 
 // Log application startup
 app.Logger.LogInformation("Employee Assignment API started successfully");
+app.Logger.LogInformation("Attendance Module enabled");
+app.Logger.LogInformation("Email Service configured (Console logging)");
 app.Logger.LogInformation("Resilience patterns enabled:");
-app.Logger.LogInformation("Retry: 3 attempts with exponential backoff (2s, 4s, 8s)");
-app.Logger.LogInformation("Circuit Breaker: Opens after 5 failures, resets after 1 minute");
-app.Logger.LogInformation("SQL Connection Resiliency: 5 retries, 30s max delay");
+app.Logger.LogInformation("  - Retry: 3 attempts with exponential backoff (2s, 4s, 8s)");
+app.Logger.LogInformation("  - Circuit Breaker: Opens after 5 failures, resets after 1 minute");
+app.Logger.LogInformation("  - SQL Connection Resiliency: 5 retries, 30s max delay");
 app.Logger.LogInformation("Health check endpoint: /health");
 
 app.Run();
