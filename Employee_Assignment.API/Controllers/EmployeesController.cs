@@ -155,7 +155,7 @@ namespace Employee_Assignment.API.Controllers
             return Ok(new { message = "Employee deleted successfully" });
         }
 
-        // NEW: Endpoint for employees to get their own profile
+        // Endpoint for employees to get their own profile
         [HttpGet("me")]
         [Authorize(Roles = "Employee")]
         public async Task<IActionResult> GetMyProfile()

@@ -27,6 +27,14 @@ namespace Employee_Assignment.API.Controllers
 
         private async Task<int?> GetCurrentEmployeeIdAsync()
         {
+            // Try to get EmployeeId from token first
+            var employeeIdClaim = User.FindFirst("EmployeeId")?.Value;
+            if (!string.IsNullOrEmpty(employeeIdClaim) && int.TryParse(employeeIdClaim, out int empId))
+            {
+                return empId;
+            }
+
+            // Fallback to email lookup
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(email)) return null;
 
@@ -229,6 +237,29 @@ namespace Employee_Assignment.API.Controllers
             {
                 _logger.LogError(ex, "Error retrieving submission rate");
                 return StatusCode(500, new { message = "An error occurred" });
+            }
+        }
+
+        // ✅ NEW: Manual endpoint to trigger absent marking (for testing or manual runs)
+        [HttpPost("mark-absent")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> MarkAbsentEmployees([FromQuery] DateTime? date)
+        {
+            try
+            {
+                var targetDate = date ?? DateTime.UtcNow.Date;
+                await _service.MarkAbsentEmployeesAsync(targetDate);
+
+                return Ok(new
+                {
+                    message = $"Successfully marked absent employees for {targetDate.ToShortDateString()}",
+                    date = targetDate
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking absent employees");
+                return StatusCode(500, new { message = "An error occurred while marking absent employees" });
             }
         }
     }

@@ -14,7 +14,7 @@ namespace Employee_Assignment.Infrastructure.Resilience
         public static AsyncRetryPolicy<HttpResponseMessage> GetRetryPolicy(ILogger logger)
         {
             return HttpPolicyExtensions
-                .HandleTransientHttpError() // Handles 5xx and 408 errors
+                .HandleTransientHttpError() // Handles 408 errors
                 .OrResult(response => (int)response.StatusCode == 429) // Too Many Requests
                 .WaitAndRetryAsync(
                     retryCount: 3,

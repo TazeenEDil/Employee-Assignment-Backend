@@ -22,11 +22,10 @@ namespace Employee_Assignment.Domain.Entities
         [Required]
         public string PasswordHash { get; set; }
 
-        public DateTime CreatedAt { get; set; } // ⭐ Removed = DateTime.UtcNow
+        public DateTime CreatedAt { get; set; } 
 
         public DateTime? LastLoginAt { get; set; }
 
-        // Navigation property
         public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     }
 }

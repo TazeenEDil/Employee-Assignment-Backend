@@ -28,8 +28,6 @@ namespace Employee_Assignment.API.Controllers
             _logger = logger;
         }
 
-        // ================= HELPER METHODS =================
-
         private async Task<int?> GetCurrentEmployeeIdAsync()
         {
             try

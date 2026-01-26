@@ -9,36 +9,53 @@ namespace Employee_Assignment.Application.Services
     public class AttendanceService : IAttendanceService
     {
         private readonly IAttendanceRepository _repository;
+        private readonly IEmployeeRepository _employeeRepository;
         private readonly ILogger<AttendanceService> _logger;
 
-        public AttendanceService(IAttendanceRepository repository, ILogger<AttendanceService> logger)
+        // Pakistani timezone
+        private static readonly TimeZoneInfo PakistanTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Pakistan Standard Time");
+
+        public AttendanceService(
+            IAttendanceRepository repository,
+            IEmployeeRepository employeeRepository,
+            ILogger<AttendanceService> logger)
         {
             _repository = repository;
+            _employeeRepository = employeeRepository;
             _logger = logger;
+        }
+
+        private DateTime GetPakistanTime()
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PakistanTimeZone);
         }
 
         public async Task<AttendanceDto> ClockInAsync(int employeeId, ClockInDto dto)
         {
-            var today = DateTime.UtcNow.Date;
+            var pakistanNow = GetPakistanTime();
+            var today = pakistanNow.Date;
+
             var existing = await _repository.GetTodayAttendanceAsync(employeeId, today);
 
             if (existing != null && existing.ClockIn != null)
                 throw new InvalidOperationException("Already clocked in today");
 
-            var now = DateTime.UtcNow;
             var attendance = existing ?? new Attendance
             {
                 EmployeeId = employeeId,
                 Date = today
             };
 
-            attendance.ClockIn = now;
+            attendance.ClockIn = pakistanNow;
             attendance.WorkMode = dto.WorkMode;
 
-            // Determine if late (after 9 AM)
-            var clockInTime = now.TimeOfDay;
+            // Determine if late (after 9 AM Pakistan time)
+            var clockInTime = pakistanNow.TimeOfDay;
             var lateThreshold = new TimeSpan(9, 0, 0);
             attendance.Status = clockInTime > lateThreshold ? "Late" : "Present";
+
+            _logger.LogInformation("Employee {EmployeeId} clocked in at {Time} Pakistan time - Status: {Status}",
+                employeeId, pakistanNow.ToString("HH:mm:ss"), attendance.Status);
 
             var result = existing == null
                 ? await _repository.CreateAsync(attendance)
@@ -49,7 +66,9 @@ namespace Employee_Assignment.Application.Services
 
         public async Task<AttendanceDto> ClockOutAsync(int employeeId)
         {
-            var today = DateTime.UtcNow.Date;
+            var pakistanNow = GetPakistanTime();
+            var today = pakistanNow.Date;
+
             var attendance = await _repository.GetTodayAttendanceAsync(employeeId, today);
 
             if (attendance == null)
@@ -58,7 +77,7 @@ namespace Employee_Assignment.Application.Services
             if (attendance.ClockOut != null)
                 throw new InvalidOperationException("Already clocked out today");
 
-            attendance.ClockOut = DateTime.UtcNow;
+            attendance.ClockOut = pakistanNow;
 
             // Calculate total work hours
             if (attendance.ClockIn != null)
@@ -73,7 +92,20 @@ namespace Employee_Assignment.Application.Services
                 }
 
                 attendance.TotalWorkHours = totalTime;
+
+                // ✅ Check if clocking out before 5 PM - mark as Late
+                var clockOutTime = pakistanNow.TimeOfDay;
+                var earlyLeaveThreshold = new TimeSpan(17, 0, 0); // 5 PM
+
+                if (clockOutTime < earlyLeaveThreshold && attendance.Status == "Present")
+                {
+                    attendance.Status = "Late";
+                    _logger.LogInformation("Employee {EmployeeId} clocked out before 5 PM - marked as Late", employeeId);
+                }
             }
+
+            _logger.LogInformation("Employee {EmployeeId} clocked out at {Time} Pakistan time - Total hours: {Hours}",
+                employeeId, pakistanNow.ToString("HH:mm:ss"), attendance.TotalWorkHours);
 
             var result = await _repository.UpdateAsync(attendance);
             return MapToDto(result);
@@ -81,7 +113,9 @@ namespace Employee_Assignment.Application.Services
 
         public async Task<AttendanceDto> StartBreakAsync(int employeeId)
         {
-            var today = DateTime.UtcNow.Date;
+            var pakistanNow = GetPakistanTime();
+            var today = pakistanNow.Date;
+
             var attendance = await _repository.GetTodayAttendanceAsync(employeeId, today);
 
             if (attendance == null || attendance.ClockIn == null)
@@ -90,14 +124,16 @@ namespace Employee_Assignment.Application.Services
             if (attendance.BreakStart != null)
                 throw new InvalidOperationException("Break already started");
 
-            attendance.BreakStart = DateTime.UtcNow;
+            attendance.BreakStart = pakistanNow;
             var result = await _repository.UpdateAsync(attendance);
             return MapToDto(result);
         }
 
         public async Task<AttendanceDto> EndBreakAsync(int employeeId)
         {
-            var today = DateTime.UtcNow.Date;
+            var pakistanNow = GetPakistanTime();
+            var today = pakistanNow.Date;
+
             var attendance = await _repository.GetTodayAttendanceAsync(employeeId, today);
 
             if (attendance == null || attendance.BreakStart == null)
@@ -106,14 +142,16 @@ namespace Employee_Assignment.Application.Services
             if (attendance.BreakEnd != null)
                 throw new InvalidOperationException("Break already ended");
 
-            attendance.BreakEnd = DateTime.UtcNow;
+            attendance.BreakEnd = pakistanNow;
             var result = await _repository.UpdateAsync(attendance);
             return MapToDto(result);
         }
 
         public async Task<AttendanceDto> SubmitDailyReportAsync(int employeeId, SubmitDailyReportDto dto)
         {
-            var today = DateTime.UtcNow.Date;
+            var pakistanNow = GetPakistanTime();
+            var today = pakistanNow.Date;
+
             var attendance = await _repository.GetTodayAttendanceAsync(employeeId, today);
 
             if (attendance == null)
@@ -121,7 +159,7 @@ namespace Employee_Assignment.Application.Services
 
             attendance.DailyReport = dto.Report;
             attendance.DailyReportSubmitted = true;
-            attendance.DailyReportSubmittedAt = DateTime.UtcNow;
+            attendance.DailyReportSubmittedAt = pakistanNow;
 
             var result = await _repository.UpdateAsync(attendance);
             return MapToDto(result);
@@ -177,6 +215,45 @@ namespace Employee_Assignment.Application.Services
             var submitted = records.Count(r => r.DailyReportSubmitted);
 
             return total > 0 ? submitted * 100.0 / total : 0;
+        }
+
+        // ✅ NEW: Mark employees as absent automatically
+        public async Task MarkAbsentEmployeesAsync(DateTime date)
+        {
+            _logger.LogInformation("Starting automatic absent marking for {Date}", date.ToShortDateString());
+
+            // Get all employees
+            var allEmployees = await _employeeRepository.GetAllEmployeesAsync();
+
+            foreach (var employee in allEmployees)
+            {
+                var attendance = await _repository.GetTodayAttendanceAsync(employee.Id, date);
+
+                // If no attendance record exists, create one marked as Absent
+                if (attendance == null)
+                {
+                    var newAttendance = new Attendance
+                    {
+                        EmployeeId = employee.Id,
+                        Date = date.Date,
+                        Status = "Absent"
+                    };
+
+                    await _repository.CreateAsync(newAttendance);
+                    _logger.LogInformation("Marked employee {EmployeeId} ({Name}) as Absent for {Date}",
+                        employee.Id, employee.Name, date.ToShortDateString());
+                }
+                // If attendance exists but no clock-in, mark as Absent
+                else if (attendance.ClockIn == null && attendance.Status != "OnLeave")
+                {
+                    attendance.Status = "Absent";
+                    await _repository.UpdateAsync(attendance);
+                    _logger.LogInformation("Updated employee {EmployeeId} ({Name}) to Absent for {Date}",
+                        employee.Id, employee.Name, date.ToShortDateString());
+                }
+            }
+
+            _logger.LogInformation("Completed automatic absent marking for {Date}", date.ToShortDateString());
         }
 
         private AttendanceDto MapToDto(Attendance attendance)

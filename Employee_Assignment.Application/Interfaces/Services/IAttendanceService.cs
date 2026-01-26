@@ -1,6 +1,5 @@
 ﻿using Employee_Assignment.Application.DTOs.Attendance;
 
-
 namespace Employee_Assignment.Application.Interfaces.Services
 {
     public interface IAttendanceService
@@ -14,5 +13,6 @@ namespace Employee_Assignment.Application.Interfaces.Services
         Task<AttendanceStatsDto> GetEmployeeStatsAsync(int employeeId, int year, int month);
         Task<RealTimeStatsDto> GetRealTimeStatsAsync(DateTime date);
         Task<double> GetDailyReportSubmissionRateAsync(DateTime date);
+        Task MarkAbsentEmployeesAsync(DateTime date);
     }
 }
