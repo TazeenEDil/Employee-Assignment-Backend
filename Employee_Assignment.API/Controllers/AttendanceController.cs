@@ -6,6 +6,7 @@ using System.Security.Claims;
 
 namespace Employee_Assignment.API.Controllers
 {
+
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -41,6 +42,32 @@ namespace Employee_Assignment.API.Controllers
             var employees = await _employeeService.GetAllAsync();
             var employee = employees.FirstOrDefault(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
             return employee?.Id;
+        }
+
+        // ✅ NEW: Get my own attendance records
+        [HttpGet("me")]
+        [Authorize(Roles = "Employee,Admin")]
+        public async Task<IActionResult> GetMyAttendance(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
+        {
+            try
+            {
+                var employeeId = await GetCurrentEmployeeIdAsync();
+                if (!employeeId.HasValue)
+                    return Unauthorized(new { message = "Employee not found" });
+
+                var start = startDate ?? DateTime.UtcNow.AddMonths(-1);
+                var end = endDate ?? DateTime.UtcNow;
+
+                var result = await _service.GetEmployeeAttendanceAsync(employeeId.Value, start, end);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving my attendance");
+                return StatusCode(500, new { message = "An error occurred" });
+            }
         }
 
         [HttpPost("clock-in")]
@@ -240,7 +267,6 @@ namespace Employee_Assignment.API.Controllers
             }
         }
 
-        // ✅ NEW: Manual endpoint to trigger absent marking (for testing or manual runs)
         [HttpPost("mark-absent")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> MarkAbsentEmployees([FromQuery] DateTime? date)
