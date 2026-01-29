@@ -14,8 +14,6 @@ namespace Employee_Assignment.Domain.Entities
         public DateTime? ReadAt { get; set; }
         public int CreatedByUserId { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        // Navigation properties
         public virtual Employee Employee { get; set; } = null!;
         public virtual User CreatedByUser { get; set; } = null!;
     }

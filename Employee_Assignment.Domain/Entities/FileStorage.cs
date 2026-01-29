@@ -33,7 +33,6 @@ namespace Employee_Assignment.Domain.Entities
 
         public DateTime? ModifiedAt { get; set; }
 
-        // Navigation property
         public virtual ICollection<EmployeeFile> EmployeeFiles { get; set; } = new List<EmployeeFile>();
     }
 }

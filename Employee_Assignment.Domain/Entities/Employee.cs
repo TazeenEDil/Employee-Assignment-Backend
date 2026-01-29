@@ -22,7 +22,7 @@ namespace Employee_Assignment.Domain.Entities
         [Required]
         public int PositionId { get; set; } // Foreign key
 
-        public DateTime CreatedAt { get; set; } // ⭐ Removed = DateTime.UtcNow
+        public DateTime CreatedAt { get; set; } 
 
         // Navigation property
         [ForeignKey("PositionId")]

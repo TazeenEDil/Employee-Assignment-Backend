@@ -9,6 +9,7 @@ namespace Employee_Assignment.Application.Interfaces.Services
         Task<AuthResponseDto?> RegisterAsync(RegisterDto registerDto);
         Task<User?> GetUserByEmailAsync(string email);
         Task<bool> EmailExistsAsync(string email);
-        string GenerateJwtToken(User user, List<string> roles);
+        string GenerateJwtToken(User user, List<string> roles, int? employeeId = null);
+
     }
 }

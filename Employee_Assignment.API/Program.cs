@@ -7,6 +7,7 @@ using Employee_Assignment.Infrastructure.Resilience;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Employee_Assignment.Infrastructure.Data;
 using Employee_Assignment.Infrastructure.Repositories;
+using Employee_Assignment.Application.BackgroundServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -120,7 +121,7 @@ builder.Services.AddCors(options =>
 
 // Register Circuit Breaker Service (SINGLETON - shared across all requests)
 builder.Services.AddSingleton<ICircuitBreakerService, CircuitBreakerService>();
-
+builder.Services.AddHostedService<AttendanceBackgroundService>();
 // Register Repositories (Infrastructure Layer) - Now with Resilience
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();

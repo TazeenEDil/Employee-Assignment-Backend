@@ -12,27 +12,60 @@ namespace Employee_Assignment.API.Controllers
     public class AttendanceController : ControllerBase
     {
         private readonly IAttendanceService _service;
-        private readonly IEmployeeService _employeeService;
         private readonly ILogger<AttendanceController> _logger;
 
         public AttendanceController(
             IAttendanceService service,
-            IEmployeeService employeeService,
             ILogger<AttendanceController> logger)
         {
             _service = service;
-            _employeeService = employeeService;
             _logger = logger;
         }
 
-        private async Task<int?> GetCurrentEmployeeIdAsync()
+        // ✅ SIMPLIFIED: Just read EmployeeId directly from claims
+        private int? GetCurrentEmployeeIdAsync()
         {
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(email)) return null;
+            var employeeIdClaim = User.FindFirst("EmployeeId")?.Value;
 
-            var employees = await _employeeService.GetAllAsync();
-            var employee = employees.FirstOrDefault(e => e.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
-            return employee?.Id;
+            if (string.IsNullOrEmpty(employeeIdClaim))
+            {
+                _logger.LogWarning("EmployeeId not found in token claims");
+                return null;
+            }
+
+            if (int.TryParse(employeeIdClaim, out int empId))
+            {
+                _logger.LogInformation("EmployeeId from token: " + empId);
+                return empId;
+            }
+
+            _logger.LogWarning("Failed to parse EmployeeId: " + employeeIdClaim);
+            return null;
+        }
+
+        [HttpGet("me")]
+        [Authorize(Roles = "Employee,Admin")]
+        public async Task<IActionResult> GetMyAttendance(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
+        {
+            try
+            {
+                var employeeId = GetCurrentEmployeeIdAsync();
+                if (!employeeId.HasValue)
+                    return Unauthorized(new { message = "Employee ID not found in token" });
+
+                var start = startDate ?? DateTime.UtcNow.AddMonths(-1);
+                var end = endDate ?? DateTime.UtcNow;
+
+                var result = await _service.GetEmployeeAttendanceAsync(employeeId.Value, start, end);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving my attendance");
+                return StatusCode(500, new { message = "An error occurred" });
+            }
         }
 
         [HttpPost("clock-in")]
@@ -41,9 +74,9 @@ namespace Employee_Assignment.API.Controllers
         {
             try
             {
-                var employeeId = await GetCurrentEmployeeIdAsync();
+                var employeeId = GetCurrentEmployeeIdAsync();
                 if (!employeeId.HasValue)
-                    return Unauthorized(new { message = "Employee not found" });
+                    return Unauthorized(new { message = "Employee ID not found in token" });
 
                 var result = await _service.ClockInAsync(employeeId.Value, dto);
                 return Ok(result);
@@ -65,9 +98,9 @@ namespace Employee_Assignment.API.Controllers
         {
             try
             {
-                var employeeId = await GetCurrentEmployeeIdAsync();
+                var employeeId = GetCurrentEmployeeIdAsync();
                 if (!employeeId.HasValue)
-                    return Unauthorized(new { message = "Employee not found" });
+                    return Unauthorized(new { message = "Employee ID not found in token" });
 
                 var result = await _service.ClockOutAsync(employeeId.Value);
                 return Ok(result);
@@ -89,9 +122,9 @@ namespace Employee_Assignment.API.Controllers
         {
             try
             {
-                var employeeId = await GetCurrentEmployeeIdAsync();
+                var employeeId = GetCurrentEmployeeIdAsync();
                 if (!employeeId.HasValue)
-                    return Unauthorized(new { message = "Employee not found" });
+                    return Unauthorized(new { message = "Employee ID not found in token" });
 
                 var result = await _service.StartBreakAsync(employeeId.Value);
                 return Ok(result);
@@ -108,9 +141,9 @@ namespace Employee_Assignment.API.Controllers
         {
             try
             {
-                var employeeId = await GetCurrentEmployeeIdAsync();
+                var employeeId = GetCurrentEmployeeIdAsync();
                 if (!employeeId.HasValue)
-                    return Unauthorized(new { message = "Employee not found" });
+                    return Unauthorized(new { message = "Employee ID not found in token" });
 
                 var result = await _service.EndBreakAsync(employeeId.Value);
                 return Ok(result);
@@ -127,9 +160,9 @@ namespace Employee_Assignment.API.Controllers
         {
             try
             {
-                var employeeId = await GetCurrentEmployeeIdAsync();
+                var employeeId = GetCurrentEmployeeIdAsync();
                 if (!employeeId.HasValue)
-                    return Unauthorized(new { message = "Employee not found" });
+                    return Unauthorized(new { message = "Employee ID not found in token" });
 
                 var result = await _service.SubmitDailyReportAsync(employeeId.Value, dto);
                 return Ok(result);
@@ -150,10 +183,9 @@ namespace Employee_Assignment.API.Controllers
         {
             try
             {
-                // Employees can only view their own attendance
                 if (User.IsInRole("Employee"))
                 {
-                    var currentEmployeeId = await GetCurrentEmployeeIdAsync();
+                    var currentEmployeeId = GetCurrentEmployeeIdAsync();
                     if (!currentEmployeeId.HasValue || currentEmployeeId.Value != employeeId)
                         return Forbid();
                 }
@@ -177,10 +209,9 @@ namespace Employee_Assignment.API.Controllers
         {
             try
             {
-                // Employees can only view their own stats
                 if (User.IsInRole("Employee"))
                 {
-                    var currentEmployeeId = await GetCurrentEmployeeIdAsync();
+                    var currentEmployeeId = GetCurrentEmployeeIdAsync();
                     if (!currentEmployeeId.HasValue || currentEmployeeId.Value != employeeId)
                         return Forbid();
                 }
@@ -229,6 +260,28 @@ namespace Employee_Assignment.API.Controllers
             {
                 _logger.LogError(ex, "Error retrieving submission rate");
                 return StatusCode(500, new { message = "An error occurred" });
+            }
+        }
+
+        [HttpPost("mark-absent")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> MarkAbsentEmployees([FromQuery] DateTime? date)
+        {
+            try
+            {
+                var targetDate = date ?? DateTime.UtcNow.Date;
+                await _service.MarkAbsentEmployeesAsync(targetDate);
+
+                return Ok(new
+                {
+                    message = "Successfully marked absent employees for " + targetDate.ToShortDateString(),
+                    date = targetDate
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking absent employees");
+                return StatusCode(500, new { message = "An error occurred while marking absent employees" });
             }
         }
     }

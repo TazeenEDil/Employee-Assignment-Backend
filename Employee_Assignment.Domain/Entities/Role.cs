@@ -14,9 +14,8 @@ namespace Employee_Assignment.Domain.Entities
         [MaxLength(50)]
         public string Name { get; set; } // "Admin", "Employee"
 
-        public DateTime CreatedAt { get; set; } // ⭐ Removed = DateTime.UtcNow
+        public DateTime CreatedAt { get; set; }
 
-        // Navigation property
         public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     }
 }
