@@ -45,6 +45,8 @@ namespace Employee_Assignment.Application.Services
 
         public async Task<LeaveRequestDto> CreateLeaveRequestAsync(int employeeId, CreateLeaveRequestDto dto)
         {
+            _logger.LogInformation($"📝 Creating leave request for employee {employeeId}");
+
             // Validate leave type
             var leaveType = await _leaveTypeRepository.GetByIdAsync(dto.LeaveTypeId);
             if (leaveType == null)
@@ -56,9 +58,42 @@ namespace Employee_Assignment.Application.Services
             // Check if exceeds max days per year
             var year = dto.StartDate.Year;
             var usedDays = await _leaveRepository.GetApprovedLeaveDaysAsync(employeeId, dto.LeaveTypeId, year);
+            var remainingDays = leaveType.MaxDaysPerYear - usedDays;
 
+            _logger.LogInformation($"📊 Leave Balance Check:");
+            _logger.LogInformation($"   Leave Type: {leaveType.Name}");
+            _logger.LogInformation($"   Max Days/Year: {leaveType.MaxDaysPerYear}");
+            _logger.LogInformation($"   Used Days: {usedDays}");
+            _logger.LogInformation($"   Remaining Days: {remainingDays}");
+            _logger.LogInformation($"   Requested Days: {totalDays}");
+
+            // ✅ Check if request exceeds remaining days
+            if (totalDays > remainingDays)
+            {
+                if (remainingDays == 0)
+                {
+                    _logger.LogWarning($"⚠️ Employee has no {leaveType.Name} days left");
+                    throw new InvalidOperationException(
+                        $"You have exhausted your {leaveType.Name} allotment of {leaveType.MaxDaysPerYear} days for {year}. You have 0 days remaining."
+                    );
+                }
+                else
+                {
+                    _logger.LogWarning($"⚠️ Request exceeds remaining days");
+                    throw new InvalidOperationException(
+                        $"You have {remainingDays} day{(remainingDays == 1 ? "" : "s")} of {leaveType.Name} left. Your request for {totalDays} day{(totalDays == 1 ? "" : "s")} exceeds your remaining balance."
+                    );
+                }
+            }
+
+            // ✅ Check if total would exceed max days per year
             if (usedDays + totalDays > leaveType.MaxDaysPerYear)
-                throw new InvalidOperationException($"Exceeds maximum {leaveType.Name} days ({leaveType.MaxDaysPerYear}) for the year");
+            {
+                _logger.LogWarning($"⚠️ Request would exceed annual limit");
+                throw new InvalidOperationException(
+                    $"Your leave request exceeds the {leaveType.Name} allotment of {leaveType.MaxDaysPerYear} days per year. You have {remainingDays} day{(remainingDays == 1 ? "" : "s")} remaining."
+                );
+            }
 
             var leaveRequest = new LeaveRequest
             {
@@ -69,31 +104,33 @@ namespace Employee_Assignment.Application.Services
                 TotalDays = totalDays,
                 Reason = dto.Reason,
                 Status = "Pending",
-                EmailActionToken = Guid.NewGuid().ToString() // ✅ Generate token
+                EmailActionToken = Guid.NewGuid().ToString()
             };
 
             var result = await _leaveRepository.CreateAsync(leaveRequest);
+            _logger.LogInformation($"✅ Leave request created successfully");
 
-            // 🔔 Send email to admin for approval
+            // Send email to admin for approval
             var employee = await _employeeRepository.GetEmployeeByIdAsync(employeeId);
-            if (employee == null)
-                throw new ArgumentException("Employee not found");
-
-            try
+            if (employee != null)
             {
-                await _emailService.SendLeaveRequestForApprovalEmailAsync(
-                    adminEmail: "admin@company.com", // Replace with actual admin email
-                    employeeName: employee.Name,
-                    startDate: result.StartDate,
-                    endDate: result.EndDate,
-                    leaveRequestId: result.LeaveRequestId,
-                    actionToken: result.EmailActionToken
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send leave approval email");
-                // Don't throw - leave request is created, email failure shouldn't block
+                try
+                {
+                    _logger.LogInformation($"📧 Sending leave request notification to admin");
+                    await _emailService.SendLeaveRequestForApprovalEmailAsync(
+                        adminEmail: "admin@company.com",
+                        employeeName: employee.Name,
+                        startDate: result.StartDate,
+                        endDate: result.EndDate,
+                        leaveRequestId: result.LeaveRequestId,
+                        actionToken: result.EmailActionToken
+                    );
+                    _logger.LogInformation($"✅ Notification email sent to admin");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send leave approval email to admin");
+                }
             }
 
             return MapToDto(result);
@@ -111,7 +148,6 @@ namespace Employee_Assignment.Application.Services
             return requests.Select(MapToDto).ToList();
         }
 
-        // ✅ NEW: Get single leave request by ID
         public async Task<LeaveRequestDto?> GetLeaveRequestByIdAsync(int id)
         {
             var leaveRequest = await _leaveRepository.GetByIdAsync(id);
@@ -120,18 +156,57 @@ namespace Employee_Assignment.Application.Services
 
         public async Task<LeaveRequestDto> ApproveOrRejectLeaveAsync(int leaveRequestId, int approvedByUserId, ApproveLeaveDto dto)
         {
+            _logger.LogInformation($"🔍 Processing leave request {leaveRequestId} by user {approvedByUserId}");
+            _logger.LogInformation($"   Approve: {dto.Approve}, Reason: {dto.RejectionReason}");
+
             var leaveRequest = await _leaveRepository.GetByIdAsync(leaveRequestId);
             if (leaveRequest == null)
+            {
+                _logger.LogError($"❌ Leave request {leaveRequestId} not found");
                 throw new ArgumentException("Leave request not found");
+            }
 
             if (leaveRequest.Status != "Pending")
+            {
+                _logger.LogWarning($"⚠️ Leave request {leaveRequestId} already processed. Status: {leaveRequest.Status}");
                 throw new InvalidOperationException("Leave request already processed");
+            }
 
-            // Get employee details for email
+            _logger.LogInformation($"📋 Leave request details: EmployeeId={leaveRequest.EmployeeId}, Status={leaveRequest.Status}");
+
+            // Get employee record
             var employee = await _employeeRepository.GetEmployeeByIdAsync(leaveRequest.EmployeeId);
             if (employee == null)
-                throw new ArgumentException("Employee not found");
+            {
+                _logger.LogError($"❌ Employee record not found for EmployeeId: {leaveRequest.EmployeeId}");
+                throw new ArgumentException($"Employee record not found for EmployeeId {leaveRequest.EmployeeId}");
+            }
 
+            _logger.LogInformation($"👤 Employee: {employee.Name} (EmployeeId: {employee.Id})");
+
+            // Check if employee has email
+            if (string.IsNullOrEmpty(employee.Email))
+            {
+                _logger.LogError($"❌ Employee {employee.Name} (ID: {employee.Id}) has no email address");
+
+                // Update the leave status in database first
+                leaveRequest.Status = dto.Approve ? "Approved" : "Rejected";
+                leaveRequest.ApprovedByUserId = approvedByUserId;
+                leaveRequest.ApprovedAt = DateTime.UtcNow;
+                if (!dto.Approve)
+                {
+                    leaveRequest.RejectionReason = dto.RejectionReason;
+                }
+
+                var resultWithoutEmail = await _leaveRepository.UpdateAsync(leaveRequest);
+
+                // THROW EXCEPTION so frontend knows email failed
+                throw new InvalidOperationException($"Leave {(dto.Approve ? "approved" : "rejected")} but employee {employee.Name} has no email configured");
+            }
+
+            _logger.LogInformation($"📧 Employee email: {employee.Email}");
+
+            // Update leave request status
             leaveRequest.Status = dto.Approve ? "Approved" : "Rejected";
             leaveRequest.ApprovedByUserId = approvedByUserId;
             leaveRequest.ApprovedAt = DateTime.UtcNow;
@@ -139,10 +214,16 @@ namespace Employee_Assignment.Application.Services
             if (!dto.Approve)
             {
                 leaveRequest.RejectionReason = dto.RejectionReason;
+                _logger.LogInformation($"❌ Rejecting leave request. Reason: {dto.RejectionReason}");
 
-                // Send rejection email
+                // Update database first
+                var result = await _leaveRepository.UpdateAsync(leaveRequest);
+                _logger.LogInformation($"✅ Leave request {leaveRequestId} marked as rejected in database");
+
+                // Then send rejection email
                 try
                 {
+                    _logger.LogInformation($"📧 Sending rejection email to: {employee.Email}");
                     await _emailService.SendLeaveRejectedEmailAsync(
                         employee.Email,
                         employee.Name,
@@ -150,15 +231,30 @@ namespace Employee_Assignment.Application.Services
                         leaveRequest.EndDate,
                         dto.RejectionReason ?? "No reason provided"
                     );
+                    _logger.LogInformation($"✅ Rejection email sent successfully to {employee.Email}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to send leave rejection email");
+                    _logger.LogError(ex, $"❌ CRITICAL: Failed to send rejection email to {employee.Email}");
+                    _logger.LogError($"   Error Type: {ex.GetType().Name}");
+                    _logger.LogError($"   Error Message: {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        _logger.LogError($"   Inner Exception: {ex.InnerException.Message}");
+                    }
+                    // THROW exception so frontend knows email failed
+                    throw new InvalidOperationException($"Leave rejected but email failed: {ex.Message}", ex);
                 }
+
+                return MapToDto(result);
             }
             else
             {
-                // Mark attendance as OnLeave for those dates
+                _logger.LogInformation($"✅ Approving leave request");
+
+                // Mark attendance as OnLeave for the date range
+                _logger.LogInformation($"📅 Marking attendance as OnLeave for dates {leaveRequest.StartDate:yyyy-MM-dd} to {leaveRequest.EndDate:yyyy-MM-dd}");
+
                 for (var date = leaveRequest.StartDate.Date; date <= leaveRequest.EndDate.Date; date = date.AddDays(1))
                 {
                     var attendance = await _attendanceRepository.GetTodayAttendanceAsync(leaveRequest.EmployeeId, date);
@@ -171,32 +267,47 @@ namespace Employee_Assignment.Application.Services
                             Status = "OnLeave"
                         };
                         await _attendanceRepository.CreateAsync(attendance);
+                        _logger.LogInformation($"   Created OnLeave attendance for {date:yyyy-MM-dd}");
                     }
                     else
                     {
                         attendance.Status = "OnLeave";
                         await _attendanceRepository.UpdateAsync(attendance);
+                        _logger.LogInformation($"   Updated attendance to OnLeave for {date:yyyy-MM-dd}");
                     }
                 }
 
-                // Send approval email
+                // Update database first
+                var result = await _leaveRepository.UpdateAsync(leaveRequest);
+                _logger.LogInformation($"✅ Leave request {leaveRequestId} marked as approved in database");
+
+                // Then send approval email
                 try
                 {
+                    _logger.LogInformation($"📧 Sending approval email to: {employee.Email}");
                     await _emailService.SendLeaveApprovedEmailAsync(
                         employee.Email,
                         employee.Name,
                         leaveRequest.StartDate,
                         leaveRequest.EndDate
                     );
+                    _logger.LogInformation($"✅ Approval email sent successfully to {employee.Email}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to send leave approval email");
+                    _logger.LogError(ex, $"❌ CRITICAL: Failed to send approval email to {employee.Email}");
+                    _logger.LogError($"   Error Type: {ex.GetType().Name}");
+                    _logger.LogError($"   Error Message: {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        _logger.LogError($"   Inner Exception: {ex.InnerException.Message}");
+                    }
+                    // THROW exception so frontend knows email failed
+                    throw new InvalidOperationException($"Leave approved but email failed: {ex.Message}", ex);
                 }
-            }
 
-            var result = await _leaveRepository.UpdateAsync(leaveRequest);
-            return MapToDto(result);
+                return MapToDto(result);
+            }
         }
 
         private LeaveRequestDto MapToDto(LeaveRequest lr)
