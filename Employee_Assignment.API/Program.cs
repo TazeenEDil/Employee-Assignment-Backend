@@ -112,7 +112,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngularApp", policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        policy.WithOrigins("http://localhost:4200", 
+            "http://localhost",
+            "http://localhost:80")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -176,15 +178,14 @@ var app = builder.Build();
 // IMPORTANT: Register Global Exception Middleware FIRST
 app.UseGlobalExceptionHandler();
 
-if (app.Environment.IsDevelopment())
-{
+
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Employee Assignment API V1");
-        c.RoutePrefix = string.Empty; // Swagger at root
+        c.RoutePrefix = "swagger"; // Swagger at root
     });
-}
+
 
 app.UseHttpsRedirection();
 
