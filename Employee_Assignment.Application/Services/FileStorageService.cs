@@ -4,6 +4,7 @@ using Employee_Assignment.Application.Exceptions;
 using Employee_Assignment.Application.Interfaces.Repositories;
 using Employee_Assignment.Application.Interfaces.Services;
 using Employee_Assignment.Domain.Entities;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Employee_Assignment.Application.Services
@@ -18,19 +19,43 @@ namespace Employee_Assignment.Application.Services
         public FileStorageService(
             IFileStorageRepository repository,
             IEmployeeRepository employeeRepository,
-            ILogger<FileStorageService> logger)
+            ILogger<FileStorageService> logger,
+            IHostEnvironment env)
         {
             _repository = repository;
             _employeeRepository = employeeRepository;
             _logger = logger;
 
-            // upload path to wwwroot/uploads
-            _uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            // IHostEnvironment doesn't have WebRootPath, so we build it manually
+            var webRoot = Path.Combine(env.ContentRootPath, "wwwroot");
+            _uploadPath = Path.Combine(webRoot, "uploads");
 
-            if (!Directory.Exists(_uploadPath))
+            _logger.LogInformation("ContentRootPath: {ContentRootPath}", env.ContentRootPath);
+            _logger.LogInformation("Upload path configured as: {UploadPath}", _uploadPath);
+
+            try
             {
-                _logger.LogInformation("Creating upload directory: {UploadPath}", _uploadPath);
-                Directory.CreateDirectory(_uploadPath);
+                if (!Directory.Exists(_uploadPath))
+                {
+                    _logger.LogInformation("Creating upload directory: {UploadPath}", _uploadPath);
+                    Directory.CreateDirectory(_uploadPath);
+                    _logger.LogInformation("Upload directory created successfully");
+                }
+                else
+                {
+                    _logger.LogInformation("Upload directory already exists: {UploadPath}", _uploadPath);
+                }
+
+                // Test write permissions
+                var testFile = Path.Combine(_uploadPath, "test_permissions.txt");
+                File.WriteAllText(testFile, "Permission test");
+                File.Delete(testFile);
+                _logger.LogInformation("Write permissions verified for upload directory");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to initialize upload directory or verify permissions: {UploadPath}", _uploadPath);
+                throw new InvalidOperationException($"Failed to initialize upload directory: {ex.Message}", ex);
             }
         }
 
@@ -103,6 +128,7 @@ namespace Employee_Assignment.Application.Services
                 _logger.LogInformation("FileName: {FileName}", uploadDto.FileName);
                 _logger.LogInformation("FileSize: {FileSize} bytes", uploadDto.FileSize);
                 _logger.LogInformation("FileCategory: {FileCategory}", uploadDto.FileCategory);
+                _logger.LogInformation("Upload Path: {UploadPath}", _uploadPath);
 
                 // Validate employee exists
                 _logger.LogInformation("Checking if employee exists...");
@@ -146,10 +172,22 @@ namespace Employee_Assignment.Application.Services
                 var fullPath = Path.Combine(_uploadPath, yearFolder, monthFolder, dateFolder);
                 _logger.LogInformation("Creating directory structure: {FullPath}", fullPath);
 
-                if (!Directory.Exists(fullPath))
+                try
                 {
-                    Directory.CreateDirectory(fullPath);
-                    _logger.LogInformation("Directory created successfully");
+                    if (!Directory.Exists(fullPath))
+                    {
+                        Directory.CreateDirectory(fullPath);
+                        _logger.LogInformation("Directory created successfully");
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Directory already exists");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to create directory: {FullPath}", fullPath);
+                    throw new Exception($"Failed to create upload directory: {ex.Message}", ex);
                 }
 
                 // Generate unique filename
@@ -158,19 +196,30 @@ namespace Employee_Assignment.Application.Services
                 var relativePath = Path.Combine(yearFolder, monthFolder, dateFolder, uniqueFileName);
 
                 _logger.LogInformation("Saving file to: {FilePath}", filePath);
+                _logger.LogInformation("Relative path: {RelativePath}", relativePath);
 
                 // Save file to disk
                 try
                 {
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
                     {
                         await uploadDto.FileStream.CopyToAsync(fileStream);
+                        await fileStream.FlushAsync();
                     }
                     _logger.LogInformation("File saved successfully to disk");
+
+                    // Verify file was created
+                    if (!File.Exists(filePath))
+                    {
+                        throw new Exception("File was not created on disk");
+                    }
+
+                    var fileInfo = new FileInfo(filePath);
+                    _logger.LogInformation("File verified on disk. Size: {Size} bytes", fileInfo.Length);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error saving file to disk");
+                    _logger.LogError(ex, "Error saving file to disk at path: {FilePath}", filePath);
                     throw new Exception($"Failed to save file to disk: {ex.Message}", ex);
                 }
 
@@ -197,8 +246,15 @@ namespace Employee_Assignment.Application.Services
                     // Clean up the physical file if database insert fails
                     if (File.Exists(filePath))
                     {
-                        File.Delete(filePath);
-                        _logger.LogInformation("Cleaned up physical file after database error");
+                        try
+                        {
+                            File.Delete(filePath);
+                            _logger.LogInformation("Cleaned up physical file after database error");
+                        }
+                        catch (Exception deleteEx)
+                        {
+                            _logger.LogError(deleteEx, "Failed to delete file during cleanup: {FilePath}", filePath);
+                        }
                     }
                     throw new Exception($"Failed to create FileStorage record: {ex.Message}", ex);
                 }
@@ -261,6 +317,7 @@ namespace Employee_Assignment.Application.Services
                 throw;
             }
         }
+
         public async Task<FileDownloadDto?> DownloadFileAsync(int employeeFileId)
         {
             _logger.LogInformation("Service: Downloading file {EmployeeFileId}", employeeFileId);
@@ -271,11 +328,18 @@ namespace Employee_Assignment.Application.Services
 
             var fullPath = Path.Combine(_uploadPath, employeeFile.FileStorage.FilePath);
 
+            _logger.LogInformation("Download file path: {FullPath}", fullPath);
+
             if (!File.Exists(fullPath))
+            {
+                _logger.LogError("Physical file not found at: {FullPath}", fullPath);
                 throw new FileNotFoundException("Physical file not found on server");
+            }
 
             var fileBytes = await File.ReadAllBytesAsync(fullPath);
             var contentType = GetContentType(employeeFile.FileStorage.FileType);
+
+            _logger.LogInformation("File downloaded successfully. Size: {Size} bytes", fileBytes.Length);
 
             return new FileDownloadDto
             {
@@ -295,14 +359,38 @@ namespace Employee_Assignment.Application.Services
 
             // Delete physical file
             var fullPath = Path.Combine(_uploadPath, employeeFile.FileStorage.FilePath);
+            _logger.LogInformation("Attempting to delete physical file: {FullPath}", fullPath);
+
             if (File.Exists(fullPath))
             {
-                File.Delete(fullPath);
+                try
+                {
+                    File.Delete(fullPath);
+                    _logger.LogInformation("Physical file deleted successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to delete physical file: {FullPath}", fullPath);
+                    throw new Exception($"Failed to delete physical file: {ex.Message}", ex);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Physical file not found: {FullPath}", fullPath);
             }
 
             // Delete database records
-            await _repository.DeleteEmployeeFileAsync(employeeFileId);
-            await _repository.DeleteFileStorageAsync(employeeFile.FileStorageId);
+            try
+            {
+                await _repository.DeleteEmployeeFileAsync(employeeFileId);
+                await _repository.DeleteFileStorageAsync(employeeFile.FileStorageId);
+                _logger.LogInformation("Database records deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete database records");
+                throw new Exception($"Failed to delete database records: {ex.Message}", ex);
+            }
 
             return true;
         }
