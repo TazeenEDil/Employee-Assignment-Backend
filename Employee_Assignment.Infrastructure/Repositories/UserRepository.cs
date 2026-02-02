@@ -2,7 +2,6 @@
 using Employee_Assignment.Application.Interfaces.Services;
 using Employee_Assignment.Domain.Entities;
 using Employee_Assignment.Infrastructure.Data;
-using Employee_Assignment.Infrastructure.Resilience;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

@@ -1,5 +1,4 @@
-﻿using BCrypt.Net;
-using Employee_Assignment.Application.DTOs.Auth;
+﻿using Employee_Assignment.Application.DTOs.Auth;
 using Employee_Assignment.Application.Exceptions;
 using Employee_Assignment.Application.Interfaces.Repositories;
 using Employee_Assignment.Application.Interfaces.Services;

@@ -81,15 +81,15 @@ namespace Employee_Assignment.Application.BackgroundServices
                 var pakistanNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PakistanTimeZone);
                 var today = pakistanNow.Date;
 
-                _logger.LogInformation("🔄 Starting automatic absent marking for {Date}", today.ToShortDateString());
+                _logger.LogInformation("Starting automatic absent marking for {Date}", today.ToShortDateString());
 
                 await attendanceService.MarkAbsentEmployeesAsync(today);
 
-                _logger.LogInformation("✅ Completed automatic absent marking for {Date}", today.ToShortDateString());
+                _logger.LogInformation("Completed automatic absent marking for {Date}", today.ToShortDateString());
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Failed to mark absent employees");
+                _logger.LogError(ex, " Failed to mark absent employees");
             }
         }
     }

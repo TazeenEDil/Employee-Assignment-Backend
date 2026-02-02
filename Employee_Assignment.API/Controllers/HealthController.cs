@@ -20,9 +20,6 @@ namespace Employee_Assignment.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Basic health check endpoint
-        /// </summary>
         [HttpGet]
         [AllowAnonymous]
         public IActionResult GetHealth()
@@ -35,9 +32,6 @@ namespace Employee_Assignment.API.Controllers
             });
         }
 
-        /// <summary>
-        /// Database connectivity check
-        /// </summary>
         [HttpGet("database")]
         [AllowAnonymous]
         public async Task<IActionResult> CheckDatabase()
@@ -81,9 +75,6 @@ namespace Employee_Assignment.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Detailed health check with all components
-        /// </summary>
         [HttpGet("detailed")]
         [Authorize]
         public async Task<IActionResult> GetDetailedHealth()

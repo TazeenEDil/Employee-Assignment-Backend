@@ -76,7 +76,7 @@ namespace Employee_Assignment.Infrastructure.Repositories
                     _context.EmployeeFiles.Add(employeeFile);
                     await _context.SaveChangesAsync();
 
-                    // Reload with navigation properties
+                    // Reload 
                     return (await _context.EmployeeFiles
                         .Include(ef => ef.Employee)
                         .Include(ef => ef.FileStorage)

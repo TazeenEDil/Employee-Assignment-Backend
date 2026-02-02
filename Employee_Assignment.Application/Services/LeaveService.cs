@@ -67,7 +67,7 @@ namespace Employee_Assignment.Application.Services
             _logger.LogInformation($"   Remaining Days: {remainingDays}");
             _logger.LogInformation($"   Requested Days: {totalDays}");
 
-            // ✅ Check if request exceeds remaining days
+            // Check if request exceeds remaining days
             if (totalDays > remainingDays)
             {
                 if (remainingDays == 0)
@@ -86,7 +86,7 @@ namespace Employee_Assignment.Application.Services
                 }
             }
 
-            // ✅ Check if total would exceed max days per year
+            // Check if total would exceed max days per year
             if (usedDays + totalDays > leaveType.MaxDaysPerYear)
             {
                 _logger.LogWarning($"⚠️ Request would exceed annual limit");
@@ -110,7 +110,7 @@ namespace Employee_Assignment.Application.Services
             var result = await _leaveRepository.CreateAsync(leaveRequest);
             _logger.LogInformation($"✅ Leave request created successfully");
 
-            // Send email to admin for approval
+            
             var employee = await _employeeRepository.GetEmployeeByIdAsync(employeeId);
             if (employee != null)
             {
@@ -253,7 +253,7 @@ namespace Employee_Assignment.Application.Services
                 _logger.LogInformation($"✅ Approving leave request");
 
                 // Mark attendance as OnLeave for the date range
-                _logger.LogInformation($"📅 Marking attendance as OnLeave for dates {leaveRequest.StartDate:yyyy-MM-dd} to {leaveRequest.EndDate:yyyy-MM-dd}");
+                _logger.LogInformation($" Marking attendance as OnLeave for dates {leaveRequest.StartDate:yyyy-MM-dd} to {leaveRequest.EndDate:yyyy-MM-dd}");
 
                 for (var date = leaveRequest.StartDate.Date; date <= leaveRequest.EndDate.Date; date = date.AddDays(1))
                 {

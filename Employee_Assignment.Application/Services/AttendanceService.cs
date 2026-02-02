@@ -49,9 +49,9 @@ namespace Employee_Assignment.Application.Services
             attendance.ClockIn = pakistanNow;
             attendance.WorkMode = dto.WorkMode;
 
-            // Determine if late (after 9 AM Pakistan time)
+           
             var clockInTime = pakistanNow.TimeOfDay;
-            var lateThreshold = new TimeSpan(9, 0, 0);
+            var lateThreshold = new TimeSpan(17, 0, 0);
             attendance.Status = clockInTime > lateThreshold ? "Late" : "Present";
 
             _logger.LogInformation("Employee {EmployeeId} clocked in at {Time} Pakistan time - Status: {Status}",
@@ -93,14 +93,14 @@ namespace Employee_Assignment.Application.Services
 
                 attendance.TotalWorkHours = totalTime;
 
-                // ✅ Check if clocking out before 5 PM - mark as Late
+                //  Check if clocking out before 5 PM - mark as Late
                 var clockOutTime = pakistanNow.TimeOfDay;
-                var earlyLeaveThreshold = new TimeSpan(17, 0, 0); // 5 PM
+                var earlyLeaveThreshold = new TimeSpan(0, 0, 0); // 12am
 
                 if (clockOutTime < earlyLeaveThreshold && attendance.Status == "Present")
                 {
-                    attendance.Status = "Late";
-                    _logger.LogInformation("Employee {EmployeeId} clocked out before 5 PM - marked as Late", employeeId);
+                    attendance.Status = "Present";
+                    _logger.LogInformation("Employee {EmployeeId} clocked out before 12 AM - marked as Present", employeeId);
                 }
             }
 

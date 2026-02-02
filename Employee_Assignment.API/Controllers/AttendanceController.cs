@@ -22,7 +22,6 @@ namespace Employee_Assignment.API.Controllers
             _logger = logger;
         }
 
-        // ✅ SIMPLIFIED: Just read EmployeeId directly from claims
         private int? GetCurrentEmployeeIdAsync()
         {
             var employeeIdClaim = User.FindFirst("EmployeeId")?.Value;

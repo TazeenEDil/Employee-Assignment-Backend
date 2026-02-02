@@ -175,7 +175,6 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline
 
-// IMPORTANT: Register Global Exception Middleware FIRST
 app.UseGlobalExceptionHandler();
 
 
@@ -183,7 +182,7 @@ app.UseGlobalExceptionHandler();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Employee Assignment API V1");
-        c.RoutePrefix = "swagger"; // Swagger at root
+        c.RoutePrefix = "swagger"; 
     });
 
 
@@ -219,7 +218,7 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
     }
 });
 
-// Auto-migrate database on startup (optional, remove in production)
+// Auto-migrate database on startup 
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -259,5 +258,4 @@ app.Logger.LogInformation("Health check endpoint: /health");
 
 app.Run();
 
-// Make the implicit Program class public for integration tests (optional)
 public partial class Program { }

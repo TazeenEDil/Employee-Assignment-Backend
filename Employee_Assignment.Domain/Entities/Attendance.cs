@@ -1,4 +1,4 @@
-﻿using System;
+﻿
 using System.ComponentModel.DataAnnotations;
 
 namespace Employee_Assignment.Domain.Entities

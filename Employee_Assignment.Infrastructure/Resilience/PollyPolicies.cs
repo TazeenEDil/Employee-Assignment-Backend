@@ -82,8 +82,6 @@ namespace Employee_Assignment.Infrastructure.Resilience
             var retry = GetRetryPolicy(logger);
             var circuitBreaker = GetCircuitBreakerPolicy(logger);
 
-            // Order matters: innermost policy executes first
-            // Flow: Request → Timeout → Retry → Circuit Breaker → External Service
             return Policy.WrapAsync(circuitBreaker, retry, timeout);
         }
     }

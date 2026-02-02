@@ -50,9 +50,7 @@ namespace Employee_Assignment.API.Controllers
             }
         }
 
-        // -------------------
         // GET all files
-        // -------------------
         [HttpGet]
         [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> GetAllFiles([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -93,9 +91,7 @@ namespace Employee_Assignment.API.Controllers
             }
         }
 
-        // -------------------
         // GET files by employee
-        // -------------------
         [HttpGet("employee/{employeeId}")]
         [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> GetFilesByEmployee(int employeeId)
@@ -119,9 +115,7 @@ namespace Employee_Assignment.API.Controllers
             }
         }
 
-        // -------------------
         // POST upload file
-        // -------------------
         [HttpPost("upload")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UploadFile([FromForm] UploadFileRequest request)
@@ -157,9 +151,7 @@ namespace Employee_Assignment.API.Controllers
             }
         }
 
-        // -------------------
         // GET download file
-        // -------------------
         [HttpGet("download/{employeeFileId}")]
         [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> DownloadFile(int employeeFileId)
@@ -187,9 +179,7 @@ namespace Employee_Assignment.API.Controllers
             }
         }
 
-        // -------------------
         // GET file preview URL
-        // -------------------
         [HttpGet("preview/{employeeFileId}")]
         [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> GetPreviewUrl(int employeeFileId)
@@ -215,9 +205,7 @@ namespace Employee_Assignment.API.Controllers
             }
         }
 
-        // -------------------
         // DELETE file
-        // -------------------
         [HttpDelete("{employeeFileId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteFile(int employeeFileId)
@@ -235,9 +223,7 @@ namespace Employee_Assignment.API.Controllers
             }
         }
 
-        // -------------------
         // GET current employee files
-        // -------------------
         [HttpGet("my-files")]
         [Authorize(Roles = "Employee")]
         public async Task<IActionResult> GetMyFiles()

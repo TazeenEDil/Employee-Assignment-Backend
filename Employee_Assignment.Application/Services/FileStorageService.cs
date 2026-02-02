@@ -24,12 +24,12 @@ namespace Employee_Assignment.Application.Services
             _employeeRepository = employeeRepository;
             _logger = logger;
 
-            // Set upload path to wwwroot/uploads
+            // upload path to wwwroot/uploads
             _uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
 
-            // Ensure directory exists
             if (!Directory.Exists(_uploadPath))
             {
+                _logger.LogInformation("Creating upload directory: {UploadPath}", _uploadPath);
                 Directory.CreateDirectory(_uploadPath);
             }
         }
@@ -96,86 +96,171 @@ namespace Employee_Assignment.Application.Services
 
         public async Task<EmployeeFileDto> UploadFileAsync(UploadFileDto uploadDto)
         {
-            _logger.LogInformation("Service: Uploading file for employee {EmployeeId}", uploadDto.EmployeeId);
-
-            // Validate employee exists
-            if (!await _employeeRepository.EmployeeExistsAsync(uploadDto.EmployeeId))
-                throw new NotFoundException("Employee", uploadDto.EmployeeId);
-
-            // Validate file
-            if (uploadDto.FileStream == null || uploadDto.FileStream.Length == 0)
-                throw new ArgumentException("File is required");
-
-            var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg" };
-            var fileExtension = Path.GetExtension(uploadDto.FileName).ToLowerInvariant();
-
-            if (!allowedExtensions.Contains(fileExtension))
-                throw new ArgumentException($"File type {fileExtension} is not allowed. Allowed types: {string.Join(", ", allowedExtensions)}");
-
-            if (uploadDto.FileSize > 10485760) // 10MB
-                throw new ArgumentException("File size exceeds 10MB limit");
-
-            // Create folder structure: Year/Month/Date
-            var now = DateTime.UtcNow;
-            var yearFolder = now.Year.ToString();
-            var monthFolder = now.Month.ToString("D2");
-            var dateFolder = now.Day.ToString("D2");
-
-            var fullPath = Path.Combine(_uploadPath, yearFolder, monthFolder, dateFolder);
-            if (!Directory.Exists(fullPath))
+            try
             {
-                Directory.CreateDirectory(fullPath);
+                _logger.LogInformation("=== Service: UploadFileAsync Started ===");
+                _logger.LogInformation("EmployeeId: {EmployeeId}", uploadDto.EmployeeId);
+                _logger.LogInformation("FileName: {FileName}", uploadDto.FileName);
+                _logger.LogInformation("FileSize: {FileSize} bytes", uploadDto.FileSize);
+                _logger.LogInformation("FileCategory: {FileCategory}", uploadDto.FileCategory);
+
+                // Validate employee exists
+                _logger.LogInformation("Checking if employee exists...");
+                if (!await _employeeRepository.EmployeeExistsAsync(uploadDto.EmployeeId))
+                {
+                    _logger.LogError("Employee {EmployeeId} does not exist", uploadDto.EmployeeId);
+                    throw new NotFoundException("Employee", uploadDto.EmployeeId);
+                }
+                _logger.LogInformation("Employee exists - validation passed");
+
+                // Validate file
+                if (uploadDto.FileStream == null || uploadDto.FileStream.Length == 0)
+                {
+                    _logger.LogError("FileStream is null or empty");
+                    throw new ArgumentException("File is required");
+                }
+
+                var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg" };
+                var fileExtension = Path.GetExtension(uploadDto.FileName).ToLowerInvariant();
+
+                _logger.LogInformation("File extension: {FileExtension}", fileExtension);
+
+                if (!allowedExtensions.Contains(fileExtension))
+                {
+                    _logger.LogError("Invalid file extension: {FileExtension}", fileExtension);
+                    throw new ArgumentException($"File type {fileExtension} is not allowed. Allowed types: {string.Join(", ", allowedExtensions)}");
+                }
+
+                if (uploadDto.FileSize > 10485760) // 10MB
+                {
+                    _logger.LogError("File size {FileSize} exceeds limit", uploadDto.FileSize);
+                    throw new ArgumentException("File size exceeds 10MB limit");
+                }
+
+                // Create folder structure: Year/Month/Date
+                var now = DateTime.UtcNow;
+                var yearFolder = now.Year.ToString();
+                var monthFolder = now.Month.ToString("D2");
+                var dateFolder = now.Day.ToString("D2");
+
+                var fullPath = Path.Combine(_uploadPath, yearFolder, monthFolder, dateFolder);
+                _logger.LogInformation("Creating directory structure: {FullPath}", fullPath);
+
+                if (!Directory.Exists(fullPath))
+                {
+                    Directory.CreateDirectory(fullPath);
+                    _logger.LogInformation("Directory created successfully");
+                }
+
+                // Generate unique filename
+                var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+                var filePath = Path.Combine(fullPath, uniqueFileName);
+                var relativePath = Path.Combine(yearFolder, monthFolder, dateFolder, uniqueFileName);
+
+                _logger.LogInformation("Saving file to: {FilePath}", filePath);
+
+                // Save file to disk
+                try
+                {
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await uploadDto.FileStream.CopyToAsync(fileStream);
+                    }
+                    _logger.LogInformation("File saved successfully to disk");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error saving file to disk");
+                    throw new Exception($"Failed to save file to disk: {ex.Message}", ex);
+                }
+
+                // Create FileStorage record
+                _logger.LogInformation("Creating FileStorage database record...");
+                var fileStorage = new FileStorage
+                {
+                    FileName = uploadDto.FileName,
+                    FilePath = relativePath,
+                    FileType = fileExtension.TrimStart('.'),
+                    FileSize = uploadDto.FileSize,
+                    FileStatus = "Active"
+                };
+
+                FileStorage createdFileStorage;
+                try
+                {
+                    createdFileStorage = await _repository.CreateFileStorageAsync(fileStorage);
+                    _logger.LogInformation("FileStorage record created with ID: {FileStorageId}", createdFileStorage.FileStorageId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creating FileStorage database record");
+                    // Clean up the physical file if database insert fails
+                    if (File.Exists(filePath))
+                    {
+                        File.Delete(filePath);
+                        _logger.LogInformation("Cleaned up physical file after database error");
+                    }
+                    throw new Exception($"Failed to create FileStorage record: {ex.Message}", ex);
+                }
+
+                // Create EmployeeFile record
+                _logger.LogInformation("Creating EmployeeFile database record...");
+                var employeeFile = new EmployeeFile
+                {
+                    EmployeeId = uploadDto.EmployeeId,
+                    FileStorageId = createdFileStorage.FileStorageId,
+                    FileCategory = uploadDto.FileCategory ?? "General"
+                };
+
+                EmployeeFile createdEmployeeFile;
+                try
+                {
+                    createdEmployeeFile = await _repository.CreateEmployeeFileAsync(employeeFile);
+                    _logger.LogInformation("EmployeeFile record created with ID: {EmployeeFileId}", createdEmployeeFile.EmployeeFileId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creating EmployeeFile database record");
+                    // Clean up FileStorage record and physical file
+                    try
+                    {
+                        await _repository.DeleteFileStorageAsync(createdFileStorage.FileStorageId);
+                        if (File.Exists(filePath))
+                        {
+                            File.Delete(filePath);
+                        }
+                        _logger.LogInformation("Cleaned up FileStorage record and physical file after error");
+                    }
+                    catch (Exception cleanupEx)
+                    {
+                        _logger.LogError(cleanupEx, "Error during cleanup");
+                    }
+                    throw new Exception($"Failed to create EmployeeFile record: {ex.Message}", ex);
+                }
+
+                _logger.LogInformation("=== Service: UploadFileAsync Completed Successfully ===");
+
+                return new EmployeeFileDto
+                {
+                    EmployeeFileId = createdEmployeeFile.EmployeeFileId,
+                    EmployeeId = createdEmployeeFile.EmployeeId,
+                    EmployeeName = createdEmployeeFile.Employee.Name,
+                    FileStorageId = createdEmployeeFile.FileStorageId,
+                    FileName = createdEmployeeFile.FileStorage.FileName,
+                    FileType = createdEmployeeFile.FileStorage.FileType,
+                    FileSize = createdEmployeeFile.FileStorage.FileSize,
+                    FileCategory = createdEmployeeFile.FileCategory,
+                    FileStatus = createdEmployeeFile.FileStorage.FileStatus,
+                    UploadedAt = createdEmployeeFile.FileStorage.UploadedAt,
+                    AssignedAt = createdEmployeeFile.AssignedAt
+                };
             }
-
-            // Generate unique filename
-            var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
-            var filePath = Path.Combine(fullPath, uniqueFileName);
-            var relativePath = Path.Combine(yearFolder, monthFolder, dateFolder, uniqueFileName);
-
-            // Save file to disk
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            catch (Exception ex)
             {
-                await uploadDto.FileStream.CopyToAsync(fileStream);
+                _logger.LogError(ex, "=== Service: UploadFileAsync Failed ===");
+                throw;
             }
-
-            // Create FileStorage record
-            var fileStorage = new FileStorage
-            {
-                FileName = uploadDto.FileName,
-                FilePath = relativePath,
-                FileType = fileExtension.TrimStart('.'),
-                FileSize = uploadDto.FileSize,
-                FileStatus = "Active"
-            };
-
-            var createdFileStorage = await _repository.CreateFileStorageAsync(fileStorage);
-
-            // Create EmployeeFile record
-            var employeeFile = new EmployeeFile
-            {
-                EmployeeId = uploadDto.EmployeeId,
-                FileStorageId = createdFileStorage.FileStorageId,
-                FileCategory = uploadDto.FileCategory ?? "General"
-            };
-
-            var createdEmployeeFile = await _repository.CreateEmployeeFileAsync(employeeFile);
-
-            return new EmployeeFileDto
-            {
-                EmployeeFileId = createdEmployeeFile.EmployeeFileId,
-                EmployeeId = createdEmployeeFile.EmployeeId,
-                EmployeeName = createdEmployeeFile.Employee.Name,
-                FileStorageId = createdEmployeeFile.FileStorageId,
-                FileName = createdEmployeeFile.FileStorage.FileName,
-                FileType = createdEmployeeFile.FileStorage.FileType,
-                FileSize = createdEmployeeFile.FileStorage.FileSize,
-                FileCategory = createdEmployeeFile.FileCategory,
-                FileStatus = createdEmployeeFile.FileStorage.FileStatus,
-                UploadedAt = createdEmployeeFile.FileStorage.UploadedAt,
-                AssignedAt = createdEmployeeFile.AssignedAt
-            };
         }
-
         public async Task<FileDownloadDto?> DownloadFileAsync(int employeeFileId)
         {
             _logger.LogInformation("Service: Downloading file {EmployeeFileId}", employeeFileId);

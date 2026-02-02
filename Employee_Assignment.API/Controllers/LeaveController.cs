@@ -19,7 +19,7 @@ namespace Employee_Assignment.API.Controllers
             _logger = logger;
         }
 
-        // ✅ Extract employee ID from token claims
+        // Extract employee ID from token claims
         private int? GetCurrentEmployeeId()
         {
             var claim =
@@ -37,7 +37,7 @@ namespace Employee_Assignment.API.Controllers
             return null;
         }
 
-        // ✅ Extract user ID from token claims (for admin actions)
+        // Extract user ID from token claims (for admin actions)
         private int? GetCurrentUserId()
         {
             var claim =
@@ -58,7 +58,7 @@ namespace Employee_Assignment.API.Controllers
 
         private void LogAllClaims()
         {
-            _logger.LogInformation("📋 All claims in token:");
+            _logger.LogInformation(" All claims in token:");
             foreach (var claim in User.Claims)
             {
                 _logger.LogInformation($"  - {claim.Type} = {claim.Value}");
@@ -69,7 +69,7 @@ namespace Employee_Assignment.API.Controllers
         [HttpGet("types")]
         public async Task<IActionResult> GetLeaveTypes()
         {
-            _logger.LogInformation("📋 Getting leave types");
+            _logger.LogInformation(" Getting leave types");
             return Ok(await _leaveService.GetLeaveTypesAsync());
         }
 
@@ -77,7 +77,7 @@ namespace Employee_Assignment.API.Controllers
         [HttpPost("request")]
         public async Task<IActionResult> CreateLeaveRequest(CreateLeaveRequestDto dto)
         {
-            _logger.LogInformation("📝 Creating leave request");
+            _logger.LogInformation(" Creating leave request");
             LogAllClaims();
 
             var employeeId = GetCurrentEmployeeId();
@@ -103,7 +103,7 @@ namespace Employee_Assignment.API.Controllers
         [HttpGet("my-requests")]
         public async Task<IActionResult> MyRequests()
         {
-            _logger.LogInformation("📋 Getting my leave requests");
+            _logger.LogInformation(" Getting my leave requests");
             var employeeId = GetCurrentEmployeeId();
             if (!employeeId.HasValue)
             {
@@ -118,7 +118,7 @@ namespace Employee_Assignment.API.Controllers
         [HttpGet("pending")]
         public async Task<IActionResult> Pending()
         {
-            _logger.LogInformation("📋 Getting pending leave requests");
+            _logger.LogInformation(" Getting pending leave requests");
             _logger.LogInformation($"User authenticated: {User.Identity?.IsAuthenticated}");
 
             LogAllClaims();
@@ -133,7 +133,6 @@ namespace Employee_Assignment.API.Controllers
             _logger.LogInformation($"IsInRole('Admin'): {isInAdminRole}");
             _logger.LogInformation($"IsInRole('admin'): {isInAdminRoleLower}");
 
-            // ✅ Manual role check
             if (!isInAdminRole && !isInAdminRoleLower)
             {
                 _logger.LogWarning("❌ User is not Admin");
@@ -147,7 +146,7 @@ namespace Employee_Assignment.API.Controllers
         [HttpPost("{id}/approve")]
         public async Task<IActionResult> ApproveReject(int id, [FromBody] ApproveLeaveDto dto)
         {
-            _logger.LogInformation($"🔍 Approving/Rejecting leave request {id}");
+            _logger.LogInformation($" Approving/Rejecting leave request {id}");
             _logger.LogInformation($"DTO - Approve: {dto.Approve}, Reason: {dto.RejectionReason}");
 
             LogAllClaims();
@@ -158,7 +157,6 @@ namespace Employee_Assignment.API.Controllers
             _logger.LogInformation($"IsInRole('Admin'): {isInAdminRole}");
             _logger.LogInformation($"IsInRole('admin'): {isInAdminRoleLower}");
 
-            // ✅ Manual role check
             if (!isInAdminRole && !isInAdminRoleLower)
             {
                 _logger.LogWarning("❌ User is not Admin");
@@ -192,7 +190,7 @@ namespace Employee_Assignment.API.Controllers
             [FromQuery] bool approve,
             [FromQuery] string token)
         {
-            _logger.LogInformation($"📧 Email action for leave request {id}");
+            _logger.LogInformation($" Email action for leave request {id}");
 
             if (string.IsNullOrEmpty(token))
             {

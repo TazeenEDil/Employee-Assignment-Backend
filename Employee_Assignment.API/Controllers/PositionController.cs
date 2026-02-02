@@ -23,7 +23,7 @@ namespace Employee_Assignment.API.Controllers
         }
 
         [HttpGet]
-        [AllowAnonymous] // Allow anonymous access for dropdowns
+        [AllowAnonymous] 
         public async Task<IActionResult> GetPositions()
         {
             _logger.LogInformation("API: Get all positions called");
